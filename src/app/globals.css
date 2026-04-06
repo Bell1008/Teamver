@@ -1,5 +1,84 @@
 @import "tailwindcss";
 
-:root { --background: #ffffff; --foreground: #171717; }
-@media (prefers-color-scheme: dark) { :root { --background: #0a0a0a; --foreground: #ededed; } }
-body { background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --blue-50: #eff6ff;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Inter", "Apple SD Gothic Neo", Arial, Helvetica, sans-serif;
+}
+
+/* ── Jelly / Spring 버튼 효과 ── */
+.btn-jelly {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.15s ease;
+}
+.btn-jelly:hover:not(:disabled) {
+  transform: scale(1.04) translateY(-1px);
+}
+.btn-jelly:active:not(:disabled) {
+  transform: scale(0.96);
+  transition-duration: 0.1s;
+}
+
+/* ── Droplet 인풋 포커스 ── */
+.input-drop {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.input-drop:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15),
+              0 0 12px rgba(59, 130, 246, 0.08);
+}
+
+/* ── 물방울 카드 hover ── */
+.card-drop {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.3s ease,
+              border-color 0.2s ease;
+}
+.card-drop:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 8px 30px rgba(37, 99, 235, 0.12);
+}
+
+/* ── 빗방울 애니메이션 (로그인 화면) ── */
+@keyframes raindrop {
+  0%   { transform: translateY(-20px) translateX(0); opacity: 0; }
+  5%   { opacity: 1; }
+  95%  { opacity: 0.7; }
+  100% { transform: translateY(100vh) translateX(-15px); opacity: 0; }
+}
+
+@keyframes ripple-out {
+  0%   { transform: scale(0.3); opacity: 0.7; }
+  100% { transform: scale(1);   opacity: 0; }
+}
+
+@keyframes puddle-shimmer {
+  0%, 100% { opacity: 0.25; }
+  50%       { opacity: 0.45; }
+}
+
+@keyframes float-drop {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+.animate-float-drop {
+  animation: float-drop 3s ease-in-out infinite;
+}
+
+/* ── 스크롤바 ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.4); }

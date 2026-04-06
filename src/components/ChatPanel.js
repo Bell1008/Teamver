@@ -3,12 +3,31 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 
+const ChatIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+);
+
+const SendIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+  </svg>
+);
+
 export default function ChatPanel({ projectId, myMemberId, myName, accentColor, isOpen, onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(null); // "summary" | "minutes" | null
   const bottomRef = useRef(null);
+  const inputRef = useRef(null);
 
   const fetchMessages = useCallback(async () => {
     const res = await fetch(`/api/projects/${projectId}/messages`);
@@ -19,6 +38,7 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
   useEffect(() => {
     if (!isOpen) return;
     fetchMessages();
+    inputRef.current?.focus();
 
     const channel = supabase
       .channel(`chat-${projectId}`)
@@ -52,11 +72,12 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
       setInput("");
     } finally {
       setSending(false);
+      inputRef.current?.focus();
     }
   };
 
   const handleAI = async (mode) => {
-    setAiLoading(true);
+    setAiLoading(mode);
     try {
       const res = await fetch(`/api/projects/${projectId}/messages/summarize`, {
         method: "POST",
@@ -66,122 +87,188 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
       const data = await res.json();
       if (data.error) alert(data.error);
     } finally {
-      setAiLoading(false);
+      setAiLoading(null);
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full sm:w-96 bg-white shadow-2xl flex flex-col z-40 border-l border-gray-200">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200" style={{ backgroundColor: accentColor }}>
-        <div className="flex items-center gap-2">
-          <span className="text-white font-semibold text-sm">팀 채팅</span>
-          <span className="text-xs text-white/70">회의록 자동 생성</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleAI("summary")}
-            disabled={aiLoading}
-            className="text-xs bg-white/20 hover:bg-white/30 text-white px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
-          >
-            {aiLoading ? "..." : "AI 요약"}
-          </button>
-          <button
-            onClick={() => handleAI("minutes")}
-            disabled={aiLoading}
-            className="text-xs bg-white/20 hover:bg-white/30 text-white px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
-          >
-            {aiLoading ? "..." : "회의록"}
-          </button>
-          <button onClick={onClose} className="text-white/80 hover:text-white ml-1 text-lg leading-none">✕</button>
-        </div>
-      </div>
+    <>
+      {/* 오버레이 (모바일) */}
+      <div
+        className="fixed inset-0 bg-black/20 z-30 sm:hidden"
+        onClick={onClose}
+      />
 
-      {/* 메세지 목록 */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-        {messages.length === 0 && (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-sm text-gray-400 text-center">
-              아직 대화가 없습니다.<br />
-              팀원들과 회의를 시작해보세요!
-            </p>
+      <div
+        className="fixed inset-y-0 right-0 w-full sm:w-[360px] flex flex-col z-40"
+        style={{
+          backgroundColor: "#fff",
+          borderLeft: "1px solid rgba(0,0,0,0.08)",
+          boxShadow: "-8px 0 40px rgba(0,0,0,0.12)",
+        }}
+      >
+        {/* 헤더 */}
+        <div
+          className="flex items-center justify-between px-4 py-3.5 shrink-0"
+          style={{
+            background: `linear-gradient(135deg, ${accentColor}, ${accentColor}dd)`,
+            boxShadow: `0 2px 12px ${accentColor}30`,
+          }}
+        >
+          <div>
+            <p className="text-white font-semibold text-sm">팀 채팅</p>
+            <p className="text-white/60 text-xs mt-0.5">대화를 기록하고 AI로 요약하세요</p>
           </div>
-        )}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => handleAI("summary")}
+              disabled={!!aiLoading}
+              className="btn-jelly text-xs bg-white/15 hover:bg-white/25 text-white px-2.5 py-1.5 rounded-lg font-medium disabled:opacity-50 transition-all"
+            >
+              {aiLoading === "summary" ? "분석 중..." : "AI 요약"}
+            </button>
+            <button
+              onClick={() => handleAI("minutes")}
+              disabled={!!aiLoading}
+              className="btn-jelly text-xs bg-white/15 hover:bg-white/25 text-white px-2.5 py-1.5 rounded-lg font-medium disabled:opacity-50 transition-all"
+            >
+              {aiLoading === "minutes" ? "작성 중..." : "회의록"}
+            </button>
+            <button
+              onClick={onClose}
+              className="btn-jelly w-7 h-7 flex items-center justify-center rounded-lg bg-white/15 hover:bg-white/25 text-white ml-1 transition-all"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+        </div>
 
-        {messages.map((msg) => {
-          const isMine = msg.member_id === myMemberId;
-          const isAI = msg.is_ai;
+        {/* 메세지 목록 */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: `${accentColor}12`, color: `${accentColor}80` }}
+              >
+                <ChatIcon />
+              </div>
+              <p className="text-sm text-gray-400">
+                아직 대화가 없습니다.<br />
+                팀원들과 회의를 시작해보세요.
+              </p>
+            </div>
+          )}
 
-          if (isAI) {
-            return (
-              <div key={msg.id} className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <span className="text-xs font-semibold" style={{ color: accentColor }}>{msg.member_name}</span>
-                  <span className="text-xs text-gray-400">{formatTime(msg.created_at)}</span>
+          {messages.map((msg) => {
+            const isMine = msg.member_id === myMemberId;
+            const isAI = msg.is_ai;
+
+            if (isAI) {
+              return (
+                <div
+                  key={msg.id}
+                  className="rounded-xl p-3.5"
+                  style={{
+                    backgroundColor: `${accentColor}08`,
+                    border: `1px solid ${accentColor}18`,
+                  }}
+                >
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div
+                      className="w-5 h-5 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: `${accentColor}20` }}
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill={accentColor}>
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+                      </svg>
+                    </div>
+                    <span className="text-xs font-semibold" style={{ color: accentColor }}>{msg.member_name}</span>
+                    <span className="text-xs text-gray-400 ml-auto">{formatTime(msg.created_at)}</span>
+                  </div>
+                  <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                 </div>
-                <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+              );
+            }
+
+            return (
+              <div key={msg.id} className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}>
+                {!isMine && (
+                  <span className="text-xs text-gray-500 mb-1 ml-2 font-medium">{msg.member_name}</span>
+                )}
+                <div className={`flex items-end gap-1.5 ${isMine ? "flex-row-reverse" : "flex-row"}`}>
+                  <div
+                    className="max-w-[78%] px-3.5 py-2 text-sm leading-relaxed"
+                    style={
+                      isMine
+                        ? {
+                            backgroundColor: accentColor,
+                            color: "white",
+                            borderRadius: "18px 18px 4px 18px",
+                            boxShadow: `0 2px 8px ${accentColor}30`,
+                          }
+                        : {
+                            backgroundColor: "#f3f4f6",
+                            color: "#1f2937",
+                            borderRadius: "18px 18px 18px 4px",
+                          }
+                    }
+                  >
+                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                  </div>
+                  <span className="text-xs text-gray-300 shrink-0 pb-0.5">{formatTime(msg.created_at)}</span>
+                </div>
               </div>
             );
-          }
-
-          return (
-            <div key={msg.id} className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}>
-              {!isMine && (
-                <span className="text-xs text-gray-500 mb-1 ml-1">{msg.member_name}</span>
-              )}
-              <div className="flex items-end gap-1.5" style={{ flexDirection: isMine ? "row-reverse" : "row" }}>
-                <div
-                  className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
-                    isMine
-                      ? "rounded-tr-sm text-white"
-                      : "rounded-tl-sm bg-gray-100 text-gray-800"
-                  }`}
-                  style={isMine ? { backgroundColor: accentColor } : {}}
-                >
-                  <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                </div>
-                <span className="text-xs text-gray-300 shrink-0">{formatTime(msg.created_at)}</span>
-              </div>
-            </div>
-          );
-        })}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* 입력창 */}
-      {!myName ? (
-        <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-          <p className="text-xs text-gray-400 text-center">참여 등록 후 채팅이 가능합니다.</p>
+          })}
+          <div ref={bottomRef} />
         </div>
-      ) : (
-        <form onSubmit={handleSend} className="px-3 py-3 border-t border-gray-200 flex gap-2">
-          <input
-            className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2"
-            style={{ "--tw-ring-color": accentColor }}
-            placeholder="메세지 입력..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={sending}
-          />
-          <button
-            type="submit"
-            disabled={sending || !input.trim()}
-            className="px-4 py-2 rounded-xl text-sm font-medium text-white disabled:opacity-40 transition-colors"
-            style={{ backgroundColor: accentColor }}
+
+        {/* 입력창 */}
+        {!myName ? (
+          <div
+            className="px-4 py-3 shrink-0"
+            style={{ borderTop: "1px solid rgba(0,0,0,0.06)", backgroundColor: "#fafafa" }}
           >
-            전송
-          </button>
-        </form>
-      )}
-    </div>
+            <p className="text-xs text-gray-400 text-center">참여 등록 후 채팅이 가능합니다.</p>
+          </div>
+        ) : (
+          <form
+            onSubmit={handleSend}
+            className="px-3 py-3 flex gap-2 shrink-0"
+            style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}
+          >
+            <input
+              ref={inputRef}
+              className="input-drop flex-1 border rounded-xl px-3.5 py-2 text-sm"
+              style={{ borderColor: "rgba(0,0,0,0.12)" }}
+              placeholder="메세지 입력..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={sending}
+            />
+            <button
+              type="submit"
+              disabled={sending || !input.trim()}
+              className="btn-jelly w-10 h-10 rounded-xl flex items-center justify-center text-white disabled:opacity-40 shrink-0"
+              style={{
+                background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
+                boxShadow: `0 2px 8px ${accentColor}30`,
+              }}
+            >
+              <SendIcon />
+            </button>
+          </form>
+        )}
+      </div>
+    </>
   );
 }
 
 function formatTime(iso) {
   const d = new Date(iso);
-  const h = d.getHours().toString().padStart(2, "0");
-  const m = d.getMinutes().toString().padStart(2, "0");
-  return `${h}:${m}`;
+  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
 }
