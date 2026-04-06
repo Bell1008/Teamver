@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getSession, getProfile } from "@/lib/auth";
 import ContributionForm from "@/components/ContributionForm";
 import WeeklyReviewButton from "@/components/WeeklyReviewButton";
 
 export default function ProjectDashboard() {
   const { id } = useParams();
+  const router = useRouter();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -17,6 +19,7 @@ export default function ProjectDashboard() {
   const [kickoffLoading, setKickoffLoading] = useState(false);
   const [kickoffDone, setKickoffDone] = useState(false);
   const [theme, setTheme] = useState({ bg: "#ffffff", accent: "#2563eb" });
+  const [userId, setUserId] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -24,7 +27,6 @@ export default function ProjectDashboard() {
       const json = await res.json();
       if (json.error) throw new Error(json.error);
       setData(json);
-      setTheme({ bg: json.project.theme_bg ?? "#ffffff", accent: json.project.theme_accent ?? "#2563eb" });
       setKickoffDone(json.milestones?.length > 0);
     } catch (e) {
       setError(e.message);
@@ -32,6 +34,17 @@ export default function ProjectDashboard() {
       setLoading(false);
     }
   }, [id]);
+
+  useEffect(() => {
+    // 로그인 상태 + 테마 로드
+    getSession().then(async (session) => {
+      if (session) {
+        setUserId(session.user.id);
+        const profile = await getProfile(session.user.id);
+        if (profile) setTheme({ bg: profile.theme_bg ?? "#ffffff", accent: profile.theme_accent ?? "#2563eb" });
+      }
+    });
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -73,14 +86,6 @@ export default function ProjectDashboard() {
     }
   };
 
-  const handleThemeSave = async () => {
-    await fetch(`/api/projects/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ theme_bg: theme.bg, theme_accent: theme.accent }),
-    });
-  };
-
   if (loading) return <main className="min-h-screen flex items-center justify-center"><p className="text-gray-400">불러오는 중...</p></main>;
   if (error) return <main className="min-h-screen flex items-center justify-center"><p className="text-red-500">{error}</p></main>;
 
@@ -97,6 +102,7 @@ export default function ProjectDashboard() {
       <header className="border-b border-gray-200 px-6 py-4" style={{ backgroundColor: theme.bg }}>
         <div className="max-w-3xl mx-auto flex justify-between items-center">
           <div>
+            <button onClick={() => router.push("/home")} className="text-xs text-gray-400 hover:text-gray-600 mb-1 block">← 마이페이지</button>
             <h1 className="text-lg font-bold">{project.title}</h1>
             <p className="text-xs text-gray-400">{project.subject} · {formatDuration(project.duration_value, project.duration_unit)}</p>
           </div>
@@ -240,39 +246,6 @@ export default function ProjectDashboard() {
           <WeeklyReviewButton projectId={id} currentWeek={currentWeek} accentColor={theme.accent} />
         )}
 
-        {/* 테마 커스텀 (방장 전용) */}
-        {isOwner && (
-          <section className="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 className="font-semibold text-gray-800 mb-4">테마 설정</h2>
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 text-sm text-gray-600">
-                <span>배경색</span>
-                <input
-                  type="color"
-                  value={theme.bg}
-                  onChange={(e) => setTheme({ ...theme, bg: e.target.value })}
-                  className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
-                />
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-600">
-                <span>강조색</span>
-                <input
-                  type="color"
-                  value={theme.accent}
-                  onChange={(e) => setTheme({ ...theme, accent: e.target.value })}
-                  className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
-                />
-              </label>
-              <button
-                onClick={handleThemeSave}
-                className="ml-auto px-4 py-1.5 rounded-lg text-sm font-medium text-white transition-colors"
-                style={{ backgroundColor: theme.accent }}
-              >
-                저장
-              </button>
-            </div>
-          </section>
-        )}
       </div>
     </main>
   );

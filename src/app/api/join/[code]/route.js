@@ -24,7 +24,7 @@ export async function GET(request, { params }) {
 export async function POST(request, { params }) {
   try {
     const { code } = await params;
-    const { name, skills, personality } = await request.json();
+    const { name, skills, personality, user_id } = await request.json();
 
     if (!name?.trim())
       return Response.json({ error: "이름을 입력해주세요." }, { status: 400 });
@@ -50,6 +50,7 @@ export async function POST(request, { params }) {
         personality: personality ?? "",
         is_ai: false,
         member_code,
+        ...(user_id ? { user_id } : {}),
       })
       .select()
       .single();

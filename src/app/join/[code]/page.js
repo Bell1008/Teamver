@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { getSession } from "@/lib/auth";
 
 const SKILLS = ["React", "Vue", "Next.js", "Node.js", "Python", "Java", "Spring", "DB 설계", "UI/UX 디자인", "기획/PM", "데이터 분석", "문서화"];
 const PERSONALITIES = ["꼼꼼하고 완성도를 중시", "논리적이고 문서화를 잘함", "창의적이고 아이디어가 많음", "리더십이 강하고 추진력 있음", "협력적이고 팀워크를 중시"];
@@ -14,6 +15,14 @@ export default function JoinPage() {
   const [form, setForm] = useState({ name: "", skills: [], personality: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    getSession().then((session) => {
+      if (!session) { router.replace(`/?redirect=/join/${code}`); return; }
+      setUserId(session.user.id);
+    });
+  }, [code, router]);
 
   useEffect(() => {
     fetch(`/api/join/${code}`)
@@ -45,7 +54,7 @@ export default function JoinPage() {
       const res = await fetch(`/api/join/${code}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, user_id: userId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
