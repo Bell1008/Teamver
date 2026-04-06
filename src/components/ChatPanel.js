@@ -111,42 +111,56 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
       >
         {/* 헤더 */}
         <div
-          className="flex items-center justify-between px-4 py-3.5 shrink-0"
+          className="shrink-0 px-4 pt-4 pb-3"
           style={{
             background: `linear-gradient(135deg, ${accentColor}, ${accentColor}dd)`,
-            boxShadow: `0 2px 12px ${accentColor}30`,
+            boxShadow: `0 2px 16px ${accentColor}35`,
           }}
         >
-          <div>
-            <p className="text-white font-semibold text-sm">팀 채팅</p>
-            <p className="text-white/60 text-xs mt-0.5">대화를 기록하고 AI로 요약하세요</p>
+          {/* 타이틀 행 */}
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-white font-semibold text-sm leading-tight">팀 채팅</p>
+              <p className="text-white/55 text-xs mt-0.5">대화를 기록하고 AI로 요약하세요</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="btn-jelly w-8 h-8 flex items-center justify-center rounded-xl text-white transition-all"
+              style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.25)"}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.15)"}
+            >
+              <CloseIcon />
+            </button>
           </div>
-          <div className="flex items-center gap-1.5">
+
+          {/* AI 버튼 행 */}
+          <div className="flex gap-2">
             <button
               onClick={() => handleAI("summary")}
               disabled={!!aiLoading}
-              className="btn-jelly text-xs bg-white/15 hover:bg-white/25 text-white px-2.5 py-1.5 rounded-lg font-medium disabled:opacity-50 transition-all"
+              className="btn-jelly flex-1 py-2 rounded-xl text-xs font-semibold text-white whitespace-nowrap disabled:opacity-50 transition-all"
+              style={{ backgroundColor: "rgba(255,255,255,0.18)", backdropFilter: "blur(4px)" }}
+              onMouseEnter={e => { if (!aiLoading) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.28)"; }}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.18)"}
             >
               {aiLoading === "summary" ? "분석 중..." : "AI 요약"}
             </button>
             <button
               onClick={() => handleAI("minutes")}
               disabled={!!aiLoading}
-              className="btn-jelly text-xs bg-white/15 hover:bg-white/25 text-white px-2.5 py-1.5 rounded-lg font-medium disabled:opacity-50 transition-all"
+              className="btn-jelly flex-1 py-2 rounded-xl text-xs font-semibold text-white whitespace-nowrap disabled:opacity-50 transition-all"
+              style={{ backgroundColor: "rgba(255,255,255,0.18)", backdropFilter: "blur(4px)" }}
+              onMouseEnter={e => { if (!aiLoading) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.28)"; }}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.18)"}
             >
               {aiLoading === "minutes" ? "작성 중..." : "회의록"}
-            </button>
-            <button
-              onClick={onClose}
-              className="btn-jelly w-7 h-7 flex items-center justify-center rounded-lg bg-white/15 hover:bg-white/25 text-white ml-1 transition-all"
-            >
-              <CloseIcon />
             </button>
           </div>
         </div>
 
         {/* 메세지 목록 */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3.5">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
               <div
@@ -201,19 +215,20 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
                 )}
                 <div className={`flex items-end gap-1.5 ${isMine ? "flex-row-reverse" : "flex-row"}`}>
                   <div
-                    className="max-w-[78%] px-3.5 py-2 text-sm leading-relaxed"
+                    className="max-w-[78%] px-4 py-2.5 text-sm leading-relaxed btn-jelly"
                     style={
                       isMine
                         ? {
-                            backgroundColor: accentColor,
+                            background: `linear-gradient(135deg, ${accentColor}, ${accentColor}dd)`,
                             color: "white",
                             borderRadius: "18px 18px 4px 18px",
-                            boxShadow: `0 2px 8px ${accentColor}30`,
+                            boxShadow: `0 3px 12px ${accentColor}35`,
                           }
                         : {
-                            backgroundColor: "#f3f4f6",
-                            color: "#1f2937",
+                            backgroundColor: "#f0f4ff",
+                            color: "#1e293b",
                             borderRadius: "18px 18px 18px 4px",
+                            border: "1px solid rgba(37,99,235,0.08)",
                           }
                     }
                   >
@@ -238,13 +253,13 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
         ) : (
           <form
             onSubmit={handleSend}
-            className="px-3 py-3 flex gap-2 shrink-0"
-            style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}
+            className="px-4 py-4 flex gap-2.5 shrink-0"
+            style={{ borderTop: "1px solid rgba(37,99,235,0.08)" }}
           >
             <input
               ref={inputRef}
-              className="input-drop flex-1 border rounded-xl px-3.5 py-2 text-sm"
-              style={{ borderColor: "rgba(0,0,0,0.12)" }}
+              className="input-drop flex-1 border rounded-2xl px-4 py-2.5 text-sm"
+              style={{ borderColor: "rgba(37,99,235,0.15)", backgroundColor: "#f8faff" }}
               placeholder="메세지 입력..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -253,10 +268,10 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
             <button
               type="submit"
               disabled={sending || !input.trim()}
-              className="btn-jelly w-10 h-10 rounded-xl flex items-center justify-center text-white disabled:opacity-40 shrink-0"
+              className="btn-jelly w-11 h-11 rounded-2xl flex items-center justify-center text-white disabled:opacity-40 shrink-0"
               style={{
-                background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
-                boxShadow: `0 2px 8px ${accentColor}30`,
+                background: `linear-gradient(135deg, ${accentColor}, #1d4ed8)`,
+                boxShadow: `0 3px 12px ${accentColor}40`,
               }}
             >
               <SendIcon />
