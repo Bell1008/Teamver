@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 
-export default function WeeklyReviewButton({ projectId, currentWeek }) {
+export default function WeeklyReviewButton({ projectId, currentWeek, accentColor = "#2563eb" }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
 
   const handleReview = async () => {
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     try {
       const res = await fetch("/api/review", {
         method: "POST",
@@ -36,7 +35,8 @@ export default function WeeklyReviewButton({ projectId, currentWeek }) {
         <button
           onClick={handleReview}
           disabled={loading}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+          className="px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50 transition-colors"
+          style={{ backgroundColor: accentColor }}
         >
           {loading ? "분석 중..." : "주간 리뷰 실행"}
         </button>
@@ -45,35 +45,25 @@ export default function WeeklyReviewButton({ projectId, currentWeek }) {
       {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
 
       {result && (
-        <div className="mt-4 space-y-4">
-          <div className="bg-blue-50 rounded-lg p-3">
-            <p className="text-xs font-semibold text-blue-700 mb-1">진단</p>
+        <div className="mt-4 space-y-3">
+          <div className="rounded-lg p-3" style={{ backgroundColor: `${accentColor}12` }}>
+            <p className="text-xs font-semibold mb-1" style={{ color: accentColor }}>진단</p>
             <p className="text-sm text-gray-700">{result.diagnosis}</p>
           </div>
-
           {result.risks?.length > 0 && (
             <div className="bg-red-50 rounded-lg p-3">
-              <p className="text-xs font-semibold text-red-600 mb-2">리스크</p>
-              <ul className="space-y-1">
-                {result.risks.map((r, i) => (
-                  <li key={i} className="text-sm text-gray-700">• {r}</li>
-                ))}
-              </ul>
+              <p className="text-xs font-semibold text-red-600 mb-1">리스크</p>
+              <ul className="space-y-1">{result.risks.map((r, i) => <li key={i} className="text-sm text-gray-700">• {r}</li>)}</ul>
             </div>
           )}
-
           {result.priorities?.length > 0 && (
             <div className="bg-green-50 rounded-lg p-3">
               <p className="text-xs font-semibold text-green-700 mb-2">다음 주 우선순위</p>
               <div className="space-y-2">
                 {result.priorities.map((p, i) => (
                   <div key={i}>
-                    <p className="text-sm font-medium text-gray-800">{p.member_name}</p>
-                    <ul className="ml-3 space-y-0.5">
-                      {(p.focus_tasks ?? []).map((t, j) => (
-                        <li key={j} className="text-xs text-gray-600">• {t}</li>
-                      ))}
-                    </ul>
+                    <p className="text-sm font-medium">{p.member_name}</p>
+                    <ul className="ml-3">{(p.focus_tasks ?? []).map((t, j) => <li key={j} className="text-xs text-gray-600">• {t}</li>)}</ul>
                   </div>
                 ))}
               </div>

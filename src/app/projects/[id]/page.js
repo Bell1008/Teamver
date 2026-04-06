@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import ContributionForm from "@/components/ContributionForm";
@@ -11,82 +11,199 @@ export default function ProjectDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isOwner, setIsOwner] = useState(false);
+  const [myMemberId, setMyMemberId] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [kickoffLoading, setKickoffLoading] = useState(false);
+  const [kickoffDone, setKickoffDone] = useState(false);
+  const [theme, setTheme] = useState({ bg: "#ffffff", accent: "#2563eb" });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const res = await fetch(`/api/projects/${id}`);
       const json = await res.json();
       if (json.error) throw new Error(json.error);
       setData(json);
+      setTheme({ bg: json.project.theme_bg ?? "#ffffff", accent: json.project.theme_accent ?? "#2563eb" });
+      setKickoffDone(json.milestones?.length > 0);
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchData();
+    // 방장/멤버 식별
+    setIsOwner(!!localStorage.getItem(`owner_${id}`));
+    setMyMemberId(localStorage.getItem(`member_id_${id}`));
 
-    // Supabase 실시간 구독 — contribution_logs 변경 시 새로고침
     const channel = supabase
       .channel(`project-${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "contribution_logs", filter: `project_id=eq.${id}` }, fetchData)
+      .on("postgres_changes", { event: "*", schema: "public", table: "members", filter: `project_id=eq.${id}` }, fetchData)
       .subscribe();
 
     return () => supabase.removeChannel(channel);
-  }, [id]);
+  }, [id, fetchData]);
+
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleKickoff = async () => {
+    setKickoffLoading(true);
+    try {
+      const res = await fetch("/api/kickoff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      await fetchData();
+      setKickoffDone(true);
+    } catch (e) {
+      alert("킥오프 실패: " + e.message);
+    } finally {
+      setKickoffLoading(false);
+    }
+  };
+
+  const handleThemeSave = async () => {
+    await fetch(`/api/projects/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ theme_bg: theme.bg, theme_accent: theme.accent }),
+    });
+  };
 
   if (loading) return <main className="min-h-screen flex items-center justify-center"><p className="text-gray-400">불러오는 중...</p></main>;
   if (error) return <main className="min-h-screen flex items-center justify-center"><p className="text-red-500">{error}</p></main>;
 
   const { project, members, milestones } = data;
+  const humanMembers = members.filter((m) => !m.is_ai);
   const currentWeek = getCurrentWeek(project.created_at, project.duration_weeks);
   const currentMilestone = milestones.find((ms) => ms.week === currentWeek) ?? milestones[0];
-  const totalTasks = milestones.reduce((sum, ms) => sum + (ms.tasks?.length ?? 0), 0);
   const daysLeft = getDaysLeft(project.created_at, project.duration_weeks);
+  const inviteUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/join/${project.invite_code}`;
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screen" style={{ backgroundColor: theme.bg }}>
       {/* 헤더 */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <header className="border-b border-gray-200 px-6 py-4" style={{ backgroundColor: theme.bg }}>
         <div className="max-w-3xl mx-auto flex justify-between items-center">
           <div>
             <h1 className="text-lg font-bold">{project.title}</h1>
             <p className="text-xs text-gray-400">{project.subject}</p>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-blue-600">D-{daysLeft}</p>
+            <p className="text-2xl font-bold" style={{ color: theme.accent }}>D-{daysLeft}</p>
             <p className="text-xs text-gray-400">마감까지</p>
           </div>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+
+        {/* 초대 코드 / 킥오프 섹션 (방장 전용) */}
+        {isOwner && (
+          <section className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="font-semibold text-gray-800">팀원 초대</h2>
+              <span className="text-xs text-gray-400">{humanMembers.length}명 참여 중</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-gray-50 rounded-lg px-4 py-2.5">
+                <p className="text-xs text-gray-400 mb-0.5">초대 코드</p>
+                <p className="font-mono font-bold text-lg tracking-widest" style={{ color: theme.accent }}>{project.invite_code}</p>
+              </div>
+              <button
+                onClick={() => handleCopy(inviteUrl)}
+                className="px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-colors"
+                style={{ backgroundColor: theme.accent }}
+              >
+                {copied ? "복사됨!" : "링크 복사"}
+              </button>
+            </div>
+
+            {!kickoffDone ? (
+              <button
+                onClick={handleKickoff}
+                disabled={kickoffLoading || humanMembers.length === 0}
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50 transition-colors"
+                style={{ backgroundColor: theme.accent }}
+              >
+                {kickoffLoading ? "AI 역할 설계 중... (10~20초)" : `AI 킥오프 실행 (${humanMembers.length}명)`}
+              </button>
+            ) : (
+              <p className="text-sm text-green-600 font-medium text-center">킥오프 완료 — 역할 및 마일스톤이 설계되었습니다.</p>
+            )}
+          </section>
+        )}
+
+        {/* 팀원이 볼 초대 코드 입력 섹션 */}
+        {!isOwner && !myMemberId && (
+          <section className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+            <p className="text-sm text-blue-700 font-medium">초대 링크로 접속하셨나요?</p>
+            <p className="text-xs text-blue-500 mt-1">초대 링크 → 참여하기를 완료해야 기여를 입력할 수 있어요.</p>
+          </section>
+        )}
+
         {/* 목표 카드 */}
         <section className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-xs text-gray-400 mb-1">프로젝트 목표</p>
           <p className="text-gray-800 font-medium">{project.goal}</p>
-          <div className="mt-4">
-            <div className="flex justify-between text-xs text-gray-400 mb-1">
-              <span>{currentWeek}주차 진행 중</span>
-              <span>총 {project.duration_weeks}주</span>
+          {kickoffDone && (
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-gray-400 mb-1">
+                <span>{currentWeek}주차 진행 중</span>
+                <span>총 {project.duration_weeks}주</span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-2">
+                <div
+                  className="h-2 rounded-full transition-all"
+                  style={{ width: `${Math.min((currentWeek / project.duration_weeks) * 100, 100)}%`, backgroundColor: theme.accent }}
+                />
+              </div>
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-2">
-              <div
-                className="bg-blue-500 h-2 rounded-full transition-all"
-                style={{ width: `${Math.min((currentWeek / project.duration_weeks) * 100, 100)}%` }}
-              />
+          )}
+        </section>
+
+        {/* 팀원 역할 카드 */}
+        <section className="bg-white rounded-xl border border-gray-200 p-5">
+          <h2 className="font-semibold text-gray-800 mb-4">팀원 {humanMembers.length > 0 ? `(${humanMembers.length}명)` : ""}</h2>
+          {humanMembers.length === 0 ? (
+            <p className="text-sm text-gray-400">아직 참여한 팀원이 없습니다.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {humanMembers.map((m) => (
+                <div key={m.id} className="rounded-lg p-3 border" style={{ borderColor: `${theme.accent}30`, backgroundColor: `${theme.accent}08` }}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: theme.accent }}>
+                      {m.name[0]}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{m.name}</p>
+                      <p className="text-xs text-gray-500">{m.role ?? "역할 미배정"}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
         </section>
 
         {/* 이번 주 마일스톤 */}
-        {currentMilestone && (
+        {kickoffDone && currentMilestone && (
           <section className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex justify-between items-center mb-3">
               <h2 className="font-semibold text-gray-800">{currentMilestone.week}주차 마일스톤</h2>
-              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{currentMilestone.title}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: theme.accent }}>{currentMilestone.title}</span>
             </div>
             <ul className="space-y-2">
               {(currentMilestone.tasks ?? []).map((task, i) => (
@@ -99,46 +216,67 @@ export default function ProjectDashboard() {
           </section>
         )}
 
-        {/* 팀원 역할 카드 */}
-        <section className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-800 mb-4">팀원 역할</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {members.map((m) => (
-              <div key={m.id} className={`rounded-lg p-3 ${m.is_ai ? "bg-purple-50 border border-purple-100" : "bg-blue-50 border border-blue-100"}`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${m.is_ai ? "bg-purple-200 text-purple-700" : "bg-blue-200 text-blue-700"}`}>
-                    {m.is_ai ? "AI" : m.name[0]}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{m.name}</p>
-                    <p className="text-xs text-gray-500">{m.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {/* 기여 입력 */}
-        <ContributionForm projectId={id} members={members.filter((m) => !m.is_ai)} onSubmit={fetchData} />
+        {kickoffDone && (myMemberId || isOwner) && (
+          <ContributionForm
+            projectId={id}
+            members={humanMembers}
+            myMemberId={myMemberId}
+            accentColor={theme.accent}
+            onSubmit={fetchData}
+          />
+        )}
 
         {/* 주간 리뷰 */}
-        <WeeklyReviewButton projectId={id} currentWeek={currentWeek} />
+        {kickoffDone && isOwner && (
+          <WeeklyReviewButton projectId={id} currentWeek={currentWeek} accentColor={theme.accent} />
+        )}
+
+        {/* 테마 커스텀 (방장 전용) */}
+        {isOwner && (
+          <section className="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 className="font-semibold text-gray-800 mb-4">테마 설정</h2>
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <span>배경색</span>
+                <input
+                  type="color"
+                  value={theme.bg}
+                  onChange={(e) => setTheme({ ...theme, bg: e.target.value })}
+                  className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <span>강조색</span>
+                <input
+                  type="color"
+                  value={theme.accent}
+                  onChange={(e) => setTheme({ ...theme, accent: e.target.value })}
+                  className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
+                />
+              </label>
+              <button
+                onClick={handleThemeSave}
+                className="ml-auto px-4 py-1.5 rounded-lg text-sm font-medium text-white transition-colors"
+                style={{ backgroundColor: theme.accent }}
+              >
+                저장
+              </button>
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );
 }
 
 function getCurrentWeek(createdAt, durationWeeks) {
-  const start = new Date(createdAt);
-  const now = new Date();
-  const diff = Math.floor((now - start) / (1000 * 60 * 60 * 24 * 7)) + 1;
+  const diff = Math.floor((new Date() - new Date(createdAt)) / (1000 * 60 * 60 * 24 * 7)) + 1;
   return Math.min(Math.max(diff, 1), durationWeeks);
 }
 
 function getDaysLeft(createdAt, durationWeeks) {
   const end = new Date(createdAt);
   end.setDate(end.getDate() + durationWeeks * 7);
-  const diff = Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24));
-  return Math.max(diff, 0);
+  return Math.max(Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24)), 0);
 }
