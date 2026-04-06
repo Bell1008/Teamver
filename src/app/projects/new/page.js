@@ -64,7 +64,7 @@ export default function NewProjectPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       localStorage.setItem(`owner_${data.id}`, data.owner_code);
-      router.push(`/projects/${data.id}`);
+      router.push(`/projects/${data.id}/setup`);
     } catch (err) {
       setError(err.message || "오류가 발생했습니다.");
     } finally {

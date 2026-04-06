@@ -20,8 +20,7 @@ export async function PATCH(request, { params }) {
     const { id } = await params;
     const body = await request.json();
 
-    // 테마 업데이트 (theme_bg, theme_accent)
-    const allowed = ["theme_bg", "theme_accent"];
+    const allowed = ["theme_bg", "theme_accent", "title", "goal", "subject", "duration_value", "duration_unit", "duration_weeks"];
     const updates = Object.fromEntries(
       Object.entries(body).filter(([k]) => allowed.includes(k))
     );
