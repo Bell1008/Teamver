@@ -7,18 +7,30 @@ export async function POST(request) {
     if (!project_id)
       return Response.json({ error: "project_id가 필요합니다." }, { status: 400 });
 
-    // DB에서 프로젝트 + 멤버 조회
-    const [{ data: project, error: pErr }, { data: members, error: mErr }] = await Promise.all([
+    // DB에서 프로젝트 + 멤버 + 기획안 조회
+    const [{ data: project, error: pErr }, { data: members, error: mErr }, { data: planningDocs }] = await Promise.all([
       supabase.from("projects").select("*").eq("id", project_id).single(),
       supabase.from("members").select("*").eq("project_id", project_id).eq("is_ai", false),
+      supabase.from("project_files").select("name, description").eq("project_id", project_id).eq("category", "planning"),
     ]);
     if (pErr) throw pErr;
     if (mErr) throw mErr;
     if (!members?.length)
       return Response.json({ error: "참여한 팀원이 없습니다." }, { status: 400 });
 
+    // 기획안 컨텍스트 생성
+    const planningContext = planningDocs?.length
+      ? planningDocs.map((d, i) => `[기획안 ${i+1}] ${d.name}${d.description ? `: ${d.description}` : ""}`).join("\n")
+      : null;
+
     const result = await callKickoffAgent({
-      project: { title: project.title, goal: project.goal, subject: project.subject, duration_weeks: project.duration_weeks },
+      project: {
+        title: project.title,
+        goal: project.goal,
+        subject: project.subject,
+        duration_weeks: project.duration_weeks,
+        planning_documents: planningContext ?? "없음",
+      },
       members: members.map((m) => ({ name: m.name, skills: m.skills, personality: m.personality })),
       ai_members: [],
     });
@@ -30,7 +42,7 @@ export async function POST(request) {
       await supabase.from("members").update({ role: ra.role, responsibilities: ra.responsibilities }).eq("id", member.id);
     }
 
-    // 마일스톤 저장 (기존 것 삭제 후 재생성)
+    // 마일스톤 저장 (기존 삭제 후 재생성)
     await supabase.from("milestones").delete().eq("project_id", project_id);
     const { error: msErr } = await supabase.from("milestones").insert(
       result.milestones.map((ms) => ({ project_id, week: ms.week, title: ms.title, tasks: ms.tasks }))
