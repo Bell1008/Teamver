@@ -182,11 +182,18 @@ export default function ProjectDashboard() {
       {!chatOpen && (
         <button
           onClick={() => setChatOpen(true)}
-          className="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full text-white shadow-lg flex items-center justify-center text-2xl hover:scale-105 transition-transform"
-          style={{ backgroundColor: theme.accent }}
+          className="btn-jelly fixed bottom-6 right-6 z-30 w-13 h-13 rounded-2xl text-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform"
+          style={{
+            background: `linear-gradient(135deg, ${theme.accent}, ${theme.accent}cc)`,
+            boxShadow: `0 4px 20px ${theme.accent}50`,
+            width: "52px",
+            height: "52px",
+          }}
           title="팀 채팅"
         >
-          💬
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
         </button>
       )}
 
