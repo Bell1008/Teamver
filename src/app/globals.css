@@ -1,84 +1,95 @@
 @import "tailwindcss";
 
+/* ── 고정 디자인 토큰 ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --blue-50: #eff6ff;
-  --blue-500: #3b82f6;
-  --blue-600: #2563eb;
+  --accent:        #2563eb;
+  --accent-dark:   #1d4ed8;
+  --accent-light:  #eff6ff;
+  --accent-muted:  rgba(37,99,235,0.10);
+  --accent-border: rgba(37,99,235,0.14);
+  --bg:            #f4f8ff;
+  --surface:       #ffffff;
+  --text:          #1e293b;
+  --text-muted:    #64748b;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg);
+  color: var(--text);
   font-family: "Inter", "Apple SD Gothic Neo", Arial, Helvetica, sans-serif;
 }
 
-/* ── Jelly / Spring 버튼 효과 ── */
-.btn-jelly {
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-              box-shadow 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-              background-color 0.15s ease;
-}
-.btn-jelly:hover:not(:disabled) {
-  transform: scale(1.04) translateY(-1px);
-}
-.btn-jelly:active:not(:disabled) {
-  transform: scale(0.96);
-  transition-duration: 0.1s;
+/* ── 페이지 배경 (물 느낌) ── */
+.page-water {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 400px 120px at 10% 90%, rgba(37,99,235,0.05) 0%, transparent 100%),
+    radial-gradient(ellipse 300px 80px  at 80% 95%, rgba(37,99,235,0.04) 0%, transparent 100%),
+    radial-gradient(ellipse 200px 60px  at 50% 88%, rgba(37,99,235,0.06) 0%, transparent 100%),
+    linear-gradient(160deg, #f0f6ff 0%, #ffffff 55%, #f4f8ff 100%);
 }
 
-/* ── Droplet 인풋 포커스 ── */
+/* ── Jelly / Spring 버튼 ── */
+.btn-jelly {
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1),
+              box-shadow 0.25s cubic-bezier(0.34,1.56,0.64,1),
+              background-color 0.15s ease;
+}
+.btn-jelly:hover:not(:disabled) { transform: scale(1.04) translateY(-1px); }
+.btn-jelly:active:not(:disabled) { transform: scale(0.96); transition-duration: 0.1s; }
+
+/* ── 인풋 물방울 포커스 ── */
 .input-drop {
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .input-drop:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15),
-              0 0 12px rgba(59, 130, 246, 0.08);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12), 0 0 12px rgba(37,99,235,0.07);
 }
 
-/* ── 물방울 카드 hover ── */
+/* ── 카드 hover ── */
 .card-drop {
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-              box-shadow 0.3s ease,
-              border-color 0.2s ease;
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s ease;
 }
-.card-drop:hover {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow: 0 8px 30px rgba(37, 99, 235, 0.12);
-}
+.card-drop:hover { transform: translateY(-2px) scale(1.005); box-shadow: 0 8px 28px rgba(37,99,235,0.10); }
 
-/* ── 빗방울 애니메이션 (로그인 화면) ── */
-@keyframes raindrop {
-  0%   { transform: translateY(-20px) translateX(0); opacity: 0; }
-  5%   { opacity: 1; }
-  95%  { opacity: 0.7; }
-  100% { transform: translateY(100vh) translateX(-15px); opacity: 0; }
+/* ── 파문 / float 애니메이션 ── */
+@keyframes float-drop { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes fadeInDown {
+  from { opacity:0; transform:translate(-50%,-12px); }
+  to   { opacity:1; transform:translate(-50%,0); }
 }
-
-@keyframes ripple-out {
-  0%   { transform: scale(0.3); opacity: 0.7; }
-  100% { transform: scale(1);   opacity: 0; }
+@keyframes fadeInUp {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
 }
-
-@keyframes puddle-shimmer {
-  0%, 100% { opacity: 0.25; }
-  50%       { opacity: 0.45; }
-}
-
-@keyframes float-drop {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-6px); }
-}
-
-.animate-float-drop {
-  animation: float-drop 3s ease-in-out infinite;
-}
+.animate-float-drop { animation: float-drop 3s ease-in-out infinite; }
+.animate-fade-in-up { animation: fadeInUp 0.25s ease forwards; }
 
 /* ── 스크롤바 ── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.2); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.4); }
+::-webkit-scrollbar-thumb { background: rgba(37,99,235,0.18); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(37,99,235,0.35); }
+
+/* ── 유리 카드 (로그인용) ── */
+.glass-card {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(147,197,253,0.15);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+/* ── 물방울 데코 버튼 ── */
+.drop-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  box-shadow: 0 4px 18px rgba(37,99,235,0.35);
+  color: white;
+  font-weight: 600;
+  border-radius: 14px;
+}
+.drop-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 24px rgba(37,99,235,0.45);
+}
