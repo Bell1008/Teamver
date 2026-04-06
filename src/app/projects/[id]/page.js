@@ -86,9 +86,9 @@ export default function ProjectDashboard() {
 
   const { project, members, milestones } = data;
   const humanMembers = members.filter((m) => !m.is_ai);
-  const currentWeek = getCurrentWeek(project.created_at, project.duration_weeks);
+  const currentWeek = getCurrentWeek(project.created_at, project.duration_value, project.duration_unit);
   const currentMilestone = milestones.find((ms) => ms.week === currentWeek) ?? milestones[0];
-  const daysLeft = getDaysLeft(project.created_at, project.duration_weeks);
+  const daysLeft = getDaysLeft(project.created_at, project.duration_value, project.duration_unit);
   const inviteUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/join/${project.invite_code}`;
 
   return (
@@ -98,11 +98,19 @@ export default function ProjectDashboard() {
         <div className="max-w-3xl mx-auto flex justify-between items-center">
           <div>
             <h1 className="text-lg font-bold">{project.title}</h1>
-            <p className="text-xs text-gray-400">{project.subject}</p>
+            <p className="text-xs text-gray-400">{project.subject} · {formatDuration(project.duration_value, project.duration_unit)}</p>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold" style={{ color: theme.accent }}>D-{daysLeft}</p>
-            <p className="text-xs text-gray-400">마감까지</p>
+            {daysLeft === null ? (
+              <p className="text-sm font-medium text-gray-400">기한 없음</p>
+            ) : (
+              <>
+                <p className="text-2xl font-bold" style={{ color: theme.accent }}>
+                  D-{daysLeft}
+                </p>
+                <p className="text-xs text-gray-400">마감까지</p>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -270,13 +278,38 @@ export default function ProjectDashboard() {
   );
 }
 
-function getCurrentWeek(createdAt, durationWeeks) {
-  const diff = Math.floor((new Date() - new Date(createdAt)) / (1000 * 60 * 60 * 24 * 7)) + 1;
-  return Math.min(Math.max(diff, 1), durationWeeks);
+function getDeadline(createdAt, duration_value, duration_unit) {
+  if (!duration_unit || !duration_value) return null;
+  const start = new Date(createdAt);
+  const ms = {
+    hours:  duration_value * 60 * 60 * 1000,
+    days:   duration_value * 24 * 60 * 60 * 1000,
+    weeks:  duration_value * 7 * 24 * 60 * 60 * 1000,
+    months: duration_value * 30.44 * 24 * 60 * 60 * 1000,
+    years:  duration_value * 365.25 * 24 * 60 * 60 * 1000,
+  }[duration_unit] ?? 0;
+  return new Date(start.getTime() + ms);
 }
 
-function getDaysLeft(createdAt, durationWeeks) {
-  const end = new Date(createdAt);
-  end.setDate(end.getDate() + durationWeeks * 7);
-  return Math.max(Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24)), 0);
+function getDaysLeft(createdAt, duration_value, duration_unit) {
+  const deadline = getDeadline(createdAt, duration_value, duration_unit);
+  if (!deadline) return null; // 기한 없음
+  const diff = deadline - new Date();
+  if (duration_unit === "hours") return Math.max(Math.ceil(diff / (60 * 60 * 1000)), 0) + "h";
+  return Math.max(Math.ceil(diff / (24 * 60 * 60 * 1000)), 0);
+}
+
+function getCurrentWeek(createdAt, duration_value, duration_unit) {
+  const totalWeeks = duration_unit === "weeks" ? duration_value
+    : duration_unit === "months" ? Math.ceil(duration_value * 4.33)
+    : duration_unit === "years"  ? Math.ceil(duration_value * 52)
+    : duration_unit === "days"   ? Math.ceil(duration_value / 7)
+    : 1;
+  const diff = Math.floor((new Date() - new Date(createdAt)) / (1000 * 60 * 60 * 24 * 7)) + 1;
+  return Math.min(Math.max(diff, 1), totalWeeks || 1);
+}
+
+function formatDuration(value, unit) {
+  if (!unit) return "기한 없음";
+  return `${value}${{ hours: "시간", days: "일", weeks: "주", months: "달", years: "년" }[unit] ?? ""}`;
 }
