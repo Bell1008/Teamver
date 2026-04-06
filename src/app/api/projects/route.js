@@ -15,13 +15,13 @@ export async function POST(request) {
     const owner_code  = genCode(12);
 
     // duration_weeks: 하위 호환 유지 (주 단위 환산, 기한 없음이면 null)
-    const duration_weeks = duration_unit === null ? null
+    const duration_weeks = !duration_unit ? 0
       : duration_unit === "hours"  ? Math.ceil(duration_value / 168)
       : duration_unit === "days"   ? Math.ceil(duration_value / 7)
       : duration_unit === "weeks"  ? duration_value
       : duration_unit === "months" ? Math.ceil(duration_value * 4.33)
       : duration_unit === "years"  ? Math.ceil(duration_value * 52)
-      : null;
+      : 0;
 
     const { data, error } = await supabase
       .from("projects")
