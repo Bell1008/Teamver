@@ -1,14 +1,44 @@
 import { supabase } from "@/lib/supabase";
 import { callKickoffAgent } from "@/services/gemini";
+
 export async function POST(request) {
   try {
-    const { project_id, project, members, ai_members } = await request.json();
-    if (!project_id || !project || !members) return Response.json({ error: "project_id, project, members 필드가 필요합니다." }, { status: 400 });
-    const result = await callKickoffAgent({ project, members, ai_members: ai_members??[] });
-    const { error: e1 } = await supabase.from("members").insert([...result.role_assignments.map(ra => { const m=members.find(x=>x.name===ra.member_name)??{}; return { project_id, name:ra.member_name, skills:m.skills??[], personality:m.personality??"", is_ai:false, role:ra.role, responsibilities:ra.responsibilities }; }), ...(result.ai_member_config??[]).map(ai => ({ project_id, name:ai.name, skills:[], personality:ai.prompt_persona, is_ai:true, role:ai.role, responsibilities:[] }))]);
-    if (e1) throw e1;
-    const { error: e2 } = await supabase.from("milestones").insert(result.milestones.map(ms => ({ project_id, week:ms.week, title:ms.title, tasks:ms.tasks })));
-    if (e2) throw e2;
+    const { project_id } = await request.json();
+    if (!project_id)
+      return Response.json({ error: "project_id가 필요합니다." }, { status: 400 });
+
+    // DB에서 프로젝트 + 멤버 조회
+    const [{ data: project, error: pErr }, { data: members, error: mErr }] = await Promise.all([
+      supabase.from("projects").select("*").eq("id", project_id).single(),
+      supabase.from("members").select("*").eq("project_id", project_id).eq("is_ai", false),
+    ]);
+    if (pErr) throw pErr;
+    if (mErr) throw mErr;
+    if (!members?.length)
+      return Response.json({ error: "참여한 팀원이 없습니다." }, { status: 400 });
+
+    const result = await callKickoffAgent({
+      project: { title: project.title, goal: project.goal, subject: project.subject, duration_weeks: project.duration_weeks },
+      members: members.map((m) => ({ name: m.name, skills: m.skills, personality: m.personality })),
+      ai_members: [],
+    });
+
+    // 역할/책임 업데이트
+    for (const ra of result.role_assignments) {
+      const member = members.find((m) => m.name === ra.member_name);
+      if (!member) continue;
+      await supabase.from("members").update({ role: ra.role, responsibilities: ra.responsibilities }).eq("id", member.id);
+    }
+
+    // 마일스톤 저장 (기존 것 삭제 후 재생성)
+    await supabase.from("milestones").delete().eq("project_id", project_id);
+    const { error: msErr } = await supabase.from("milestones").insert(
+      result.milestones.map((ms) => ({ project_id, week: ms.week, title: ms.title, tasks: ms.tasks }))
+    );
+    if (msErr) throw msErr;
+
     return Response.json(result, { status: 201 });
-  } catch (err) { return Response.json({ error: err.message }, { status: 500 }); }
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 });
+  }
 }
