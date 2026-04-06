@@ -17,92 +17,76 @@ export default function RainBackground() {
     resize();
     window.addEventListener("resize", resize);
 
-    // 빗방울 생성
-    const drops = Array.from({ length: 180 }, () => spawnDrop(canvas));
-
     // 파문 목록
     const ripples = [];
 
-    function spawnDrop(c) {
-      return {
-        x: Math.random() * c.width * 1.3,
-        y: -60 - Math.random() * c.height * 0.5,
-        speed: 7 + Math.random() * 9,
-        len: 14 + Math.random() * 22,
-        opacity: 0.18 + Math.random() * 0.38,
-        w: 0.5 + Math.random() * 1.2,
-      };
-    }
-
-    function spawnRipple(x, y) {
-      ripples.push({ x, y, r: 1, maxR: 18 + Math.random() * 28, opacity: 0.55, rx: 1.8 });
-    }
-
-    function drawPuddles(c, ctx) {
-      const count = 5;
-      for (let i = 0; i < count; i++) {
-        const px = (c.width / (count + 1)) * (i + 1) + Math.sin(i * 7) * 60;
-        const py = c.height - 18 - Math.sin(i * 3) * 8;
-        const rw = 40 + i * 25 + Math.sin(i) * 15;
-        const rh = 4 + Math.sin(i * 2) * 2;
-
-        const grad = ctx.createRadialGradient(px, py, 0, px, py, rw);
-        grad.addColorStop(0, "rgba(96, 165, 250, 0.35)");
-        grad.addColorStop(0.6, "rgba(59, 130, 246, 0.18)");
-        grad.addColorStop(1, "rgba(37, 99, 235, 0)");
-
-        ctx.beginPath();
-        ctx.ellipse(px, py, rw, rh, 0, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
+    // 파문 생성 (한 지점에서 여러 겹 링)
+    function spawnDrop(x, y) {
+      const rings = 2 + Math.floor(Math.random() * 2); // 2~3겹
+      for (let i = 0; i < rings; i++) {
+        setTimeout(() => {
+          ripples.push({
+            x,
+            y,
+            r: 1,
+            maxR: 28 + Math.random() * 30 + i * 8,
+            opacity: 0.55 - i * 0.12,
+            speed: 0.6 + Math.random() * 0.3,
+            lineW: 1.2 - i * 0.25,
+          });
+        }, i * 70);
       }
     }
 
-    function animate() {
+    // 톡톡 — 불규칙 간격으로 방울 생성
+    let nextDrop = 0;
+    function scheduleNext() {
+      nextDrop = performance.now() + 400 + Math.random() * 1000;
+    }
+    scheduleNext();
+
+    function animate(now) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 웅덩이
-      drawPuddles(canvas, ctx);
+      // 새 방울 스케줄
+      if (now >= nextDrop) {
+        const x = 60 + Math.random() * (canvas.width - 120);
+        const y = 80 + Math.random() * (canvas.height - 160);
+        spawnDrop(x, y);
+        scheduleNext();
+      }
 
-      // 빗방울
-      drops.forEach((d) => {
-        ctx.beginPath();
-        ctx.moveTo(d.x, d.y);
-        ctx.lineTo(d.x - d.speed * 0.18, d.y + d.len);
-        ctx.strokeStyle = `rgba(147, 197, 253, ${d.opacity})`;
-        ctx.lineWidth = d.w;
-        ctx.lineCap = "round";
-        ctx.stroke();
-
-        d.y += d.speed;
-        d.x -= d.speed * 0.18;
-
-        if (d.y > canvas.height + 10) {
-          if (Math.random() > 0.55) spawnRipple(d.x, canvas.height - 10 - Math.random() * 30);
-          Object.assign(d, spawnDrop(canvas));
-          d.x = Math.random() * canvas.width * 1.3;
-          d.y = -20;
-        }
-      });
-
-      // 파문
+      // 파문 그리기
       for (let i = ripples.length - 1; i >= 0; i--) {
-        const r = ripples[i];
+        const rp = ripples[i];
+
         ctx.beginPath();
-        ctx.ellipse(r.x, r.y, r.r * r.rx, r.r * 0.32, 0, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(147, 197, 253, ${r.opacity})`;
-        ctx.lineWidth = 0.8;
+        ctx.ellipse(rp.x, rp.y, rp.r, rp.r * 0.38, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(147, 197, 253, ${rp.opacity})`;
+        ctx.lineWidth = rp.lineW;
         ctx.stroke();
 
-        r.r += 0.9;
-        r.opacity -= 0.022;
-        if (r.opacity <= 0 || r.r > r.maxR) ripples.splice(i, 1);
+        // 중심 점 (아주 작게, 첫 프레임에만)
+        if (rp.r < 4) {
+          ctx.beginPath();
+          ctx.arc(rp.x, rp.y, 1.5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(147, 197, 253, ${rp.opacity * 0.6})`;
+          ctx.fill();
+        }
+
+        rp.r += rp.speed;
+        rp.opacity -= 0.012;
+        rp.lineW = Math.max(rp.lineW - 0.005, 0.3);
+
+        if (rp.opacity <= 0 || rp.r > rp.maxR) {
+          ripples.splice(i, 1);
+        }
       }
 
       animId = requestAnimationFrame(animate);
     }
 
-    animate();
+    animId = requestAnimationFrame(animate);
 
     return () => {
       cancelAnimationFrame(animId);

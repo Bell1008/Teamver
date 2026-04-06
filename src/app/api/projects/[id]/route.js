@@ -40,3 +40,14 @@ export async function PATCH(request, { params }) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request, { params }) {
+  try {
+    const { id } = await params;
+    const { error } = await supabase.from("projects").delete().eq("id", id);
+    if (error) throw error;
+    return Response.json({ ok: true });
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}
