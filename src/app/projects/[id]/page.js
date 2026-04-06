@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { getSession, getProfile } from "@/lib/auth";
 import ContributionForm from "@/components/ContributionForm";
 import WeeklyReviewButton from "@/components/WeeklyReviewButton";
+import ChatPanel from "@/components/ChatPanel";
 
 const UNIT_OPTIONS = [
   { value: "hours",  label: "시간" },
@@ -36,6 +37,9 @@ export default function ProjectDashboard() {
   const [kickoffDone, setKickoffDone] = useState(false);
   const [theme, setTheme] = useState({ bg: "#ffffff", accent: "#2563eb" });
   const [userId, setUserId] = useState(null);
+
+  // 채팅 패널
+  const [chatOpen, setChatOpen] = useState(false);
 
   // 프로젝트 수정 상태
   const [editing, setEditing] = useState(false);
@@ -160,8 +164,32 @@ export default function ProjectDashboard() {
   const daysLeft = getDaysLeft(project.created_at, project.duration_value, project.duration_unit);
   const inviteUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/join/${project.invite_code}`;
 
+  const myName = typeof window !== "undefined" ? localStorage.getItem(`member_name_${id}`) : null;
+
   return (
     <main className="min-h-screen" style={{ backgroundColor: theme.bg }}>
+      {/* 채팅 패널 */}
+      <ChatPanel
+        projectId={id}
+        myMemberId={myMemberId}
+        myName={myName}
+        accentColor={theme.accent}
+        isOpen={chatOpen}
+        onClose={() => setChatOpen(false)}
+      />
+
+      {/* 채팅 플로팅 버튼 */}
+      {!chatOpen && (
+        <button
+          onClick={() => setChatOpen(true)}
+          className="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full text-white shadow-lg flex items-center justify-center text-2xl hover:scale-105 transition-transform"
+          style={{ backgroundColor: theme.accent }}
+          title="팀 채팅"
+        >
+          💬
+        </button>
+      )}
+
       {/* 수정 모달 */}
       {editing && editForm && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
