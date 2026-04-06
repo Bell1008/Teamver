@@ -107,7 +107,7 @@ export default function HomePage() {
 
       {/* 메인 */}
       <main className="flex-1 overflow-hidden">
-        {activeTab === "projects"      && <ProjectsTab userId={userId} />}
+        {activeTab === "projects"      && <ProjectsTab userId={userId} accentColor={ACCENT} />}
         {activeTab === "messages"      && <MessagesTab />}
         {activeTab === "notifications" && <NotificationsTab />}
         {activeTab === "settings"      && <SettingsTab profile={profile} />}
