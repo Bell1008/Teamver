@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getSession } from "@/lib/auth";
 
 const UNIT_OPTIONS = [
   { value: "hours",  label: "시간" },
@@ -33,6 +34,14 @@ export default function NewProjectPage() {
   const [project, setProject] = useState({ title: "", goal: "", subject: "" });
   const [durationUnit, setDurationUnit] = useState("weeks");
   const [durationValue, setDurationValue] = useState(4);
+  const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    getSession().then((session) => {
+      if (!session) { router.replace("/"); return; }
+      setUserId(session.user.id);
+    });
+  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,6 +58,7 @@ export default function NewProjectPage() {
           ...project,
           duration_value: durationUnit ? Number(durationValue) : null,
           duration_unit: durationUnit,
+          owner_id: userId,
         }),
       });
       const data = await res.json();
@@ -65,7 +75,7 @@ export default function NewProjectPage() {
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
-        <button onClick={() => router.push("/")} className="text-sm text-gray-400 hover:text-gray-600 mb-6 flex items-center gap-1">
+        <button onClick={() => router.push("/home")} className="text-sm text-gray-400 hover:text-gray-600 mb-6 flex items-center gap-1">
           ← 돌아가기
         </button>
         <h1 className="text-2xl font-bold mb-1">팀플 만들기</h1>

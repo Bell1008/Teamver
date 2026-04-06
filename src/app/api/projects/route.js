@@ -7,7 +7,7 @@ function genCode(len) {
 
 export async function POST(request) {
   try {
-    const { title, goal, subject, duration_value, duration_unit } = await request.json();
+    const { title, goal, subject, duration_value, duration_unit, owner_id } = await request.json();
     if (!title || !goal || !subject)
       return Response.json({ error: "필수 필드 누락" }, { status: 400 });
 
@@ -25,7 +25,7 @@ export async function POST(request) {
 
     const { data, error } = await supabase
       .from("projects")
-      .insert({ title, goal, subject, duration_weeks, duration_value: duration_unit ? duration_value : null, duration_unit: duration_unit ?? null, invite_code, owner_code })
+      .insert({ title, goal, subject, duration_weeks, duration_value: duration_unit ? duration_value : null, duration_unit: duration_unit ?? null, invite_code, owner_code, ...(owner_id ? { owner_id } : {}) })
       .select()
       .single();
 
