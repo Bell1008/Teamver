@@ -641,7 +641,11 @@ export default function ProjectDashboard() {
                   {/* 액션 버튼 */}
                   <div className="flex gap-2 pt-1">
                     <button
-                      onClick={() => { showToast("개인 메시지 기능은 준비 중입니다."); setViewMember(null); }}
+                      onClick={() => {
+                        if (!vm.user_id) { showToast("이 멤버는 아직 로그인하지 않았습니다."); return; }
+                        setViewMember(null);
+                        router.push(`/home?tab=messages&dm=${vm.user_id}&name=${encodeURIComponent(vm.name)}`);
+                      }}
                       className="btn-jelly flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white"
                       style={{background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`,boxShadow:`0 3px 12px rgba(37,99,235,0.3)`}}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
