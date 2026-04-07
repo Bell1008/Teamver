@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { callKickoffAgent } from "@/services/gemini";
+import { getProjectPersona } from "@/lib/projectPersona";
 
 export async function POST(request) {
   try {
@@ -23,6 +24,7 @@ export async function POST(request) {
       ? planningDocs.map((d, i) => `[기획안 ${i+1}] ${d.name}${d.description ? `: ${d.description}` : ""}`).join("\n")
       : null;
 
+    const persona = getProjectPersona(project);
     const result = await callKickoffAgent({
       project: {
         title: project.title,
@@ -30,6 +32,7 @@ export async function POST(request) {
         subject: project.subject,
         duration_weeks: project.duration_weeks,
         planning_documents: planningContext ?? "없음",
+        domain_persona: persona,
       },
       members: members.map((m) => ({ name: m.name, skills: m.skills, personality: m.personality })),
       ai_members: [],

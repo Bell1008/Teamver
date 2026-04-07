@@ -28,11 +28,12 @@ const TABS = [
 function HomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState("projects");
-  const [userId, setUserId] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [dmTarget, setDmTarget] = useState(null); // { partnerId, partnerName }
+  const [activeTab, setActiveTab]   = useState("projects");
+  const [userId, setUserId]         = useState(null);
+  const [profile, setProfile]       = useState(null);
+  const [loading, setLoading]       = useState(true);
+  const [dmTarget, setDmTarget]     = useState(null);
+  const [unreadDm, setUnreadDm]     = useState(0); // 미읽 DM 수 → 탭 배지
 
   useEffect(() => {
     getSession().then(async (session) => {
@@ -44,14 +45,17 @@ function HomePage() {
     });
   }, [router]);
 
-  // URL 파라미터로 DM 바로 열기: ?tab=messages&dm=<userId>&name=<name>
+  // URL 파라미터로 DM 바로 열기
   useEffect(() => {
-    const tab = searchParams.get("tab");
-    const dm  = searchParams.get("dm");
+    const tab  = searchParams.get("tab");
+    const dm   = searchParams.get("dm");
     const name = searchParams.get("name");
     if (tab) setActiveTab(tab);
     if (dm)  setDmTarget({ partnerId: dm, partnerName: name ?? "팀원" });
   }, [searchParams]);
+
+  // 메시지 탭 열면 배지 초기화
+  useEffect(() => { if (activeTab === "messages") setUnreadDm(0); }, [activeTab]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center page-water">
@@ -84,27 +88,41 @@ function HomePage() {
         <nav className="flex-1 py-3 space-y-0.5 px-2">
           {TABS.map((tab) => {
             const active = activeTab === tab.id;
+            const badge  = tab.id === "messages" && unreadDm > 0 ? unreadDm : 0;
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className="btn-jelly w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
                 style={active ? { backgroundColor: `rgba(37,99,235,0.1)`, color: ACCENT, boxShadow: `inset 0 0 0 1px rgba(37,99,235,0.15)` } : { color: "#6b7280" }}>
-                <span className="shrink-0">{tab.icon}</span>
+                <span className="relative shrink-0">
+                  {tab.icon}
+                  {badge > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+                      style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)` }}>
+                      {badge > 9 ? "9+" : badge}
+                    </span>
+                  )}
+                </span>
                 <span className="hidden sm:block">{tab.label}</span>
-                {active && <span className="hidden sm:block ml-auto w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ACCENT }} />}
+                {badge > 0 && !active && <span className="hidden sm:block ml-auto w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ACCENT }} />}
+                {active && badge === 0 && <span className="hidden sm:block ml-auto w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ACCENT }} />}
               </button>
             );
           })}
         </nav>
 
-        {/* 유저 */}
+        {/* 유저 — 클릭 시 설정 이동 */}
         <div className="p-3 border-t" style={{ borderColor: "rgba(37,99,235,0.07)" }}>
-          <div className="hidden sm:flex items-center gap-2.5 px-2 py-1.5 mb-1 rounded-xl">
+          <button onClick={() => setActiveTab("settings")}
+            className="btn-jelly hidden sm:flex w-full items-center gap-2.5 px-2 py-1.5 mb-1 rounded-xl hover:bg-gray-50 transition-colors text-left">
             <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
               style={{ background: `linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow: `0 2px 8px rgba(37,99,235,0.3)` }}>
               {profile?.username?.[0]?.toUpperCase() ?? "?"}
             </div>
-            <span className="text-sm text-gray-700 font-medium truncate">{profile?.username}</span>
-          </div>
+            <span className="text-sm text-gray-700 font-medium truncate flex-1">{profile?.username}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round">
+              <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+            </svg>
+          </button>
           <button onClick={() => { signOut(); router.replace("/"); }}
             className="btn-jelly w-full hidden sm:flex items-center gap-2 px-2 py-1.5 text-xs text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
             {Icons.logout}<span>로그아웃</span>
@@ -119,7 +137,7 @@ function HomePage() {
       {/* 메인 */}
       <main className="flex-1 overflow-hidden">
         {activeTab === "projects"      && <ProjectsTab userId={userId} accentColor={ACCENT} />}
-        {activeTab === "messages"      && <MessagesTab userId={userId} initialPartnerId={dmTarget?.partnerId} initialPartnerName={dmTarget?.partnerName} />}
+        {activeTab === "messages"      && <MessagesTab userId={userId} initialPartnerId={dmTarget?.partnerId} initialPartnerName={dmTarget?.partnerName} onUnreadChange={setUnreadDm} />}
         {activeTab === "notifications" && <NotificationsTab />}
         {activeTab === "settings"      && <SettingsTab profile={profile} />}
       </main>
