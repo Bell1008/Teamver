@@ -7,20 +7,37 @@ const ACCENT = "#2563eb";
 const MAX_FREE_PLANNING = 3;
 const MAX_SIZE_MB = 5;
 
-function fileIcon(mime) {
-  if (!mime) return "📄";
-  if (mime.startsWith("image/")) return "🖼";
-  if (mime.includes("pdf")) return "📕";
-  if (mime.includes("word") || mime.includes("document")) return "📝";
-  if (mime.includes("sheet") || mime.includes("excel")) return "📊";
-  if (mime.includes("presentation") || mime.includes("powerpoint")) return "📊";
-  return "📄";
+const EXT_MAP = {
+  pdf:  { label:"PDF",  bg:"#fee2e2", color:"#dc2626" },
+  ppt:  { label:"PPT",  bg:"#ffedd5", color:"#ea580c" },
+  pptx: { label:"PPT",  bg:"#ffedd5", color:"#ea580c" },
+  doc:  { label:"DOC",  bg:"#dbeafe", color:"#2563eb" },
+  docx: { label:"DOC",  bg:"#dbeafe", color:"#2563eb" },
+  hwp:  { label:"HWP",  bg:"#dbeafe", color:"#1d4ed8" },
+  xls:  { label:"XLS",  bg:"#dcfce7", color:"#16a34a" },
+  xlsx: { label:"XLS",  bg:"#dcfce7", color:"#16a34a" },
+  md:   { label:"MD",   bg:"#f1f5f9", color:"#475569" },
+  txt:  { label:"TXT",  bg:"#f1f5f9", color:"#64748b" },
+  png:  { label:"IMG",  bg:"#d1fae5", color:"#059669" },
+  jpg:  { label:"IMG",  bg:"#d1fae5", color:"#059669" },
+  jpeg: { label:"IMG",  bg:"#d1fae5", color:"#059669" },
+};
+
+function getFileInfo(name = "", mime = "") {
+  const ext = name.includes(".") ? name.split(".").pop().toLowerCase() : "";
+  if (EXT_MAP[ext]) return EXT_MAP[ext];
+  if (mime.startsWith("image/")) return EXT_MAP["png"];
+  if (mime.includes("pdf")) return EXT_MAP["pdf"];
+  if (mime.includes("word")) return EXT_MAP["doc"];
+  if (mime.includes("presentation") || mime.includes("powerpoint")) return EXT_MAP["ppt"];
+  return { label:"FILE", bg:"#f1f5f9", color:"#64748b" };
 }
 
 function formatSize(bytes) {
+  if (!bytes) return "";
   if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / 1048576).toFixed(1)}MB`;
 }
 
 export default function PlanningDocs({ projectId, memberId, memberName, canUpload }) {
@@ -50,17 +67,20 @@ export default function PlanningDocs({ projectId, memberId, memberName, canUploa
 
     setUploading(true);
     try {
-      // Supabase Storage 업로드
-      const path = `${projectId}/planning/${Date.now()}_${file.name}`;
-      const { error: storErr } = await supabase.storage.from("teamver").upload(path, file);
+      // UUID 기반 경로 — 한글·특수문자 포함 파일명도 안전하게 업로드
+      const ext = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
+      const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const storagePath = `${projectId}/planning/${uid}${ext ? "." + ext : ""}`;
+
+      const { error: storErr } = await supabase.storage.from("teamver").upload(storagePath, file);
       if (storErr) throw storErr;
 
-      const { data: { publicUrl } } = supabase.storage.from("teamver").getPublicUrl(path);
+      const { data: { publicUrl } } = supabase.storage.from("teamver").getPublicUrl(storagePath);
 
       const res = await fetch(`/api/projects/${projectId}/files`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ member_id: memberId, member_name: memberName, name: file.name, url: publicUrl, size: file.size, mime_type: file.type, category: "planning", description: desc.trim() || null }),
+        body: JSON.stringify({ member_id: memberId, member_name: memberName, name: file.name, url: publicUrl, storage_path: storagePath, size: file.size, mime_type: file.type, category: "planning", description: desc.trim() || null }),
       });
       const data = await res.json();
       if (res.status === 402) { setPremiumMsg(data.error); setShowPremium(true); return; }
@@ -95,25 +115,50 @@ export default function PlanningDocs({ projectId, memberId, memberName, canUploa
       </div>
 
       {/* 문서 목록 */}
-      <div className="space-y-2 mb-3">
-        {docs.length === 0 && <p className="text-xs text-gray-300 text-center py-3">기획안을 올려주세요.</p>}
-        {docs.map((doc) => (
-          <div key={doc.id} className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl group" style={{ backgroundColor: "rgba(37,99,235,0.03)", border: "1px solid rgba(37,99,235,0.07)" }}>
-            <span className="text-base shrink-0">{fileIcon(doc.mime_type)}</span>
-            <div className="flex-1 min-w-0">
-              <a href={doc.url} target="_blank" rel="noreferrer" className="text-xs font-medium text-gray-700 hover:text-blue-600 truncate block transition-colors">{doc.name}</a>
-              {doc.description && <p className="text-xs text-gray-400 mt-0.5 truncate">{doc.description}</p>}
-              <p className="text-xs text-gray-300 mt-0.5">{formatSize(doc.size)} · {doc.member_name}</p>
+      <div className="space-y-1.5 mb-3">
+        {docs.length === 0 && (
+          <p className="text-xs text-gray-300 text-center py-4">기획안을 올려주세요.</p>
+        )}
+        {docs.map((doc) => {
+          const info = getFileInfo(doc.name, doc.mime_type ?? "");
+          return (
+            <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl group transition-all"
+              style={{ backgroundColor: "rgba(248,250,255,0.8)", border: "1px solid rgba(37,99,235,0.07)" }}>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-xs font-black"
+                style={{ backgroundColor: info.bg, color: info.color }}>
+                {info.label}
+              </div>
+              <div className="flex-1 min-w-0">
+                <a href={doc.url} target="_blank" rel="noreferrer"
+                  className="text-sm font-semibold text-gray-800 hover:text-blue-600 truncate block transition-colors leading-tight">
+                  {doc.name}
+                </a>
+                <p className="text-xs text-gray-400 mt-0.5 truncate">
+                  {[doc.description, formatSize(doc.size), doc.member_name].filter(Boolean).join(" · ")}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <a href={doc.url} download={doc.name} target="_blank" rel="noreferrer"
+                  className="btn-jelly w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+                  style={{ backgroundColor: "rgba(37,99,235,0.08)", color: ACCENT }} title="다운로드">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                </a>
+                {canUpload && (
+                  <button onClick={() => handleDelete(doc.id)}
+                    className="btn-jelly w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-400 transition-colors"
+                    title="삭제">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
-            {canUpload && (
-              <button onClick={() => handleDelete(doc.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-all">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                </svg>
-              </button>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* 업로드 영역 */}

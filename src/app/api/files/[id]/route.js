@@ -3,17 +3,20 @@ import { supabase } from "@/lib/supabase";
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
-    // DB에서 파일 정보 조회 후 Storage에서도 삭제
-    const { data: file } = await supabase.from("project_files").select("url").eq("id", id).single();
+    const { data: file } = await supabase
+      .from("project_files").select("url, storage_path").eq("id", id).single();
 
-    if (file?.url) {
-      // Storage path 추출 (URL에서 bucket 경로)
-      try {
-        const url = new URL(file.url);
-        const path = url.pathname.split("/storage/v1/object/public/teamver/")[1];
-        if (path) await supabase.storage.from("teamver").remove([path]);
-      } catch {
-        // Storage 삭제 실패해도 DB는 삭제
+    if (file) {
+      // storage_path 컬럼 우선, 없으면 URL에서 추출 (하위 호환)
+      let path = file.storage_path ?? null;
+      if (!path && file.url) {
+        try {
+          const url = new URL(file.url);
+          path = url.pathname.split("/storage/v1/object/public/teamver/")[1] ?? null;
+        } catch { /* ignore */ }
+      }
+      if (path) {
+        await supabase.storage.from("teamver").remove([decodeURIComponent(path)]);
       }
     }
 

@@ -25,7 +25,7 @@ export async function POST(request, { params }) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { member_id, member_name, name, url, size, mime_type, category, description } = body;
+    const { member_id, member_name, name, url, storage_path, size, mime_type, category, description } = body;
 
     if (!name || !url) return Response.json({ error: "파일 정보가 부족합니다." }, { status: 400 });
 
@@ -49,7 +49,7 @@ export async function POST(request, { params }) {
     }
 
     const { data, error } = await supabase.from("project_files")
-      .insert({ project_id: id, member_id: member_id ?? null, member_name: member_name ?? null, name, url, size: size ?? 0, mime_type: mime_type ?? null, category: category ?? "file", description: description?.trim() ?? null })
+      .insert({ project_id: id, member_id: member_id ?? null, member_name: member_name ?? null, name, url, storage_path: storage_path ?? null, size: size ?? 0, mime_type: mime_type ?? null, category: category ?? "file", description: description?.trim() ?? null })
       .select().single();
 
     if (error) throw error;
