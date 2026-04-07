@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { getProjectPersona } from "@/lib/projectPersona";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
@@ -8,7 +9,9 @@ function getApiKey() {
   return k;
 }
 
-const SYSTEM_PROMPT = `You are an expert project manager AI for Teamver, a student team collaboration platform.
+// domain_persona는 userPrompt에 포함되어 AI가 읽음
+const SYSTEM_PROMPT = `You are a domain expert and project manager AI for Teamver.
+Use the domain_persona field in the user input as your primary persona and expertise lens.
 Analyze the provided team project data and generate a comprehensive contribution and health report in Korean.
 
 Scoring guidelines:
@@ -93,8 +96,11 @@ export async function POST(request, { params }) {
       };
     });
 
+    const persona = getProjectPersona(project);
+
     // Gemini 프롬프트 조립
     const userPrompt = JSON.stringify({
+      domain_persona: persona,
       project: {
         title: project.title,
         goal: project.goal,

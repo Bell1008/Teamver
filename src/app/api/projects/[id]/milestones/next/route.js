@@ -1,8 +1,11 @@
 import { supabase } from "@/lib/supabase";
+import { getProjectPersona } from "@/lib/projectPersona";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
-const SYSTEM_PROMPT = `당신은 10년 경력의 프로젝트 매니저입니다.
+const BASE_PROMPT = `당신은 프로젝트의 도메인 전문가이자 경험 많은 PM입니다.
+입력의 domain_persona 값을 당신의 페르소나로 사용하세요.
+
 팀플 프로젝트의 현재 진행 상황을 분석하고 다음 마일스톤을 생성해주세요.
 
 규칙:
@@ -48,7 +51,9 @@ export async function POST(request, { params }) {
       ms.tasks.length > 0 && ms.tasks.every((_, i) => (ms.completed_tasks ?? []).includes(i))
     );
 
+    const persona = getProjectPersona(project);
     const userPrompt = JSON.stringify({
+      domain_persona: persona,
       project: {
         title: project?.title,
         goal: project?.goal,
@@ -86,7 +91,7 @@ export async function POST(request, { params }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        system_instruction: { parts: [{ text: BASE_PROMPT }] },
         contents: [{ role: "user", parts: [{ text: userPrompt }] }],
         generationConfig: { temperature: 0.35, responseMimeType: "application/json" },
       }),
