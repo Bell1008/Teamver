@@ -26,6 +26,7 @@ export default function ProjectDashboard() {
   const [data, setData]             = useState(null);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState("");
+  const [userId, setUserId]         = useState(null);
   const [isOwner, setIsOwner]       = useState(false);
   const [myMemberId, setMyMemberId] = useState(null);
   const [myMember, setMyMember]     = useState(null);
@@ -71,11 +72,8 @@ export default function ProjectDashboard() {
   }, [id, showToast]);
 
   useEffect(() => {
+    getSession().then((s) => { if (s) setUserId(s.user.id); });
     fetchData();
-    const ownerId = localStorage.getItem(`owner_${id}`);
-    const membId  = localStorage.getItem(`member_id_${id}`);
-    setIsOwner(!!ownerId);
-    setMyMemberId(membId);
 
     const ch = supabase.channel(`proj-${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "contribution_logs", filter: `project_id=eq.${id}` }, fetchData)
@@ -84,6 +82,21 @@ export default function ProjectDashboard() {
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, [id, fetchData]);
+
+  // auth userId + DB 데이터로 신원 확인 (localStorage는 캐시로만)
+  useEffect(() => {
+    if (!data || !userId) return;
+    if (data.project.owner_id === userId) {
+      setIsOwner(true);
+      if (data.project.owner_code) localStorage.setItem(`owner_${id}`, data.project.owner_code);
+    }
+    const myM = data.members.find((m) => m.user_id === userId && !m.is_ai);
+    if (myM) {
+      setMyMemberId(myM.id);
+      localStorage.setItem(`member_id_${id}`, myM.id);
+      localStorage.setItem(`member_name_${id}`, myM.name);
+    }
+  }, [data, userId, id]);
 
   // myMember 동기화
   useEffect(() => {
@@ -164,7 +177,7 @@ export default function ProjectDashboard() {
   const currentMilestone = milestones.find((ms) => ms.week === currentWeek) ?? milestones[0];
   const daysLeft = getDaysLeft(project.created_at, project.duration_value, project.duration_unit);
   const inviteUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/join/${project.invite_code}`;
-  const myName = typeof window !== "undefined" ? localStorage.getItem(`member_name_${id}`) : null;
+  const myName = myMember?.name ?? null;
   const isAdmin = myMember?.is_admin ?? false;
 
   return (
