@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-// 세련된 일렁이는 파도 + 부유 글로우 배경
+// 아주 천천히 일렁이는 오로라 효과
 export default function RainBackground() {
   const canvasRef = useRef(null);
 
@@ -18,107 +18,49 @@ export default function RainBackground() {
     resize();
     window.addEventListener("resize", resize);
 
-    // ── 파도 레이어 정의 ──────────────────────────────
-    const waves = [
-      { amp: 38,  freq: 0.0016, speed: 0.00055, yRatio: 0.62, color: "rgba(59,130,246,0.07)",  lineW: 1.5 },
-      { amp: 28,  freq: 0.0022, speed: 0.00080, yRatio: 0.65, color: "rgba(99,102,241,0.06)",  lineW: 1.2 },
-      { amp: 50,  freq: 0.0011, speed: 0.00040, yRatio: 0.58, color: "rgba(37,99,235,0.05)",   lineW: 1.8 },
-      { amp: 22,  freq: 0.0030, speed: 0.00110, yRatio: 0.70, color: "rgba(147,197,253,0.05)", lineW: 1.0 },
-      { amp: 60,  freq: 0.0008, speed: 0.00028, yRatio: 0.80, color: "rgba(30,64,175,0.06)",   lineW: 2.0 },
+    // 오로라 레이어 — 색상·위치·속도 모두 극도로 느리게
+    const layers = [
+      { hue: 200, sat: 70, baseY: 0.35, amp: 0.12, freq: 0.0008, speed: 0.00012, width: 0.55, alpha: 0.13 },
+      { hue: 230, sat: 65, baseY: 0.50, amp: 0.10, freq: 0.0006, speed: 0.00009, width: 0.65, alpha: 0.10 },
+      { hue: 260, sat: 60, baseY: 0.42, amp: 0.14, freq: 0.0010, speed: 0.00015, width: 0.50, alpha: 0.09 },
+      { hue: 190, sat: 75, baseY: 0.60, amp: 0.08, freq: 0.0005, speed: 0.00008, width: 0.70, alpha: 0.08 },
+      { hue: 215, sat: 80, baseY: 0.28, amp: 0.09, freq: 0.0012, speed: 0.00018, width: 0.45, alpha: 0.07 },
     ];
 
-    // ── 부유 글로우 오브 ──────────────────────────────
-    const orbs = Array.from({ length: 5 }, (_, i) => ({
-      x:     Math.random() * window.innerWidth,
-      y:     Math.random() * window.innerHeight,
-      r:     120 + Math.random() * 180,
-      dx:    (Math.random() - 0.5) * 0.18,
-      dy:    (Math.random() - 0.5) * 0.14,
-      phase: Math.random() * Math.PI * 2,
-      speed: 0.0004 + Math.random() * 0.0003,
-      color: ["59,130,246","99,102,241","37,99,235","147,197,253","30,64,175"][i],
-    }));
-
     let t = 0;
+    let last = performance.now();
 
-    function drawWave(wave, w, h, t) {
-      const baseY = h * wave.yRatio;
+    function drawAuroraLayer(layer, w, h) {
+      const cx  = w * 0.5;
+      const cy  = h * layer.baseY + Math.sin(t * layer.speed * 60000 * 0.7) * h * 0.06;
+      const rw  = w * layer.width;
+      const rh  = h * layer.amp * (0.85 + 0.15 * Math.sin(t * layer.speed * 60000 * 1.3));
+
+      // 위아래로 퍼지는 가우시안-느낌 방사형 그라디언트
+      const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, rw * 0.9);
+      const col = `hsla(${layer.hue + Math.sin(t * layer.speed * 60000 * 0.4) * 15}, ${layer.sat}%, 65%,`;
+      grd.addColorStop(0,   `${col} ${layer.alpha})`);
+      grd.addColorStop(0.4, `${col} ${layer.alpha * 0.55})`);
+      grd.addColorStop(1,   `${col} 0)`);
+
+      ctx.save();
+      ctx.scale(1, rh / (rw * 0.9));  // 타원형으로 찌그러트림
       ctx.beginPath();
-      ctx.moveTo(0, baseY);
-
-      for (let x = 0; x <= w; x += 3) {
-        const y = baseY
-          + Math.sin(x * wave.freq + t * wave.speed * 60000) * wave.amp
-          + Math.sin(x * wave.freq * 1.7 + t * wave.speed * 60000 * 0.6) * (wave.amp * 0.3);
-        ctx.lineTo(x, y);
-      }
-
-      ctx.strokeStyle = wave.color;
-      ctx.lineWidth   = wave.lineW;
-      ctx.stroke();
-    }
-
-    function drawOrb(orb, t) {
-      // 부드러운 위아래 부유
-      const floatY = Math.sin(t * orb.speed * 60000 + orb.phase) * 30;
-      const x = orb.x;
-      const y = orb.y + floatY;
-
-      const grad = ctx.createRadialGradient(x, y, 0, x, y, orb.r);
-      grad.addColorStop(0,   `rgba(${orb.color}, 0.055)`);
-      grad.addColorStop(0.5, `rgba(${orb.color}, 0.025)`);
-      grad.addColorStop(1,   `rgba(${orb.color}, 0)`);
-
-      ctx.beginPath();
-      ctx.arc(x, y, orb.r, 0, Math.PI * 2);
-      ctx.fillStyle = grad;
+      ctx.ellipse(cx, cy / (rh / (rw * 0.9)), rw * 0.9, rw * 0.9, 0, 0, Math.PI * 2);
+      ctx.fillStyle = grd;
       ctx.fill();
-
-      // 오브 천천히 이동 (벽 반사)
-      orb.x += orb.dx;
-      orb.y += orb.dy;
-      if (orb.x < -orb.r)                    orb.x = canvas.width  + orb.r;
-      if (orb.x > canvas.width  + orb.r)     orb.x = -orb.r;
-      if (orb.y < -orb.r)                    orb.y = canvas.height + orb.r;
-      if (orb.y > canvas.height + orb.r)     orb.y = -orb.r;
+      ctx.restore();
     }
 
-    // ── 수면 반사 파티클 ──────────────────────────────
-    const sparks = Array.from({ length: 18 }, () => ({
-      x:     Math.random() * window.innerWidth,
-      y:     0.5 * window.innerHeight + (Math.random() - 0.5) * window.innerHeight * 0.6,
-      size:  0.8 + Math.random() * 1.4,
-      phase: Math.random() * Math.PI * 2,
-      speed: 0.0006 + Math.random() * 0.0008,
-      op:    0.15 + Math.random() * 0.25,
-    }));
-
-    function drawSparks(t) {
-      sparks.forEach((s) => {
-        const alpha = s.op * (0.5 + 0.5 * Math.sin(t * s.speed * 60000 + s.phase));
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(147, 197, 253, ${alpha})`;
-        ctx.fill();
-      });
-    }
-
-    let last = 0;
     function animate(now) {
-      const dt = (now - last) / 1000;
+      const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
       t += dt;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 오브 먼저 (배경 글로우)
-      orbs.forEach((o) => drawOrb(o, t));
-
-      // 파도
-      waves.forEach((w) => drawWave(w, canvas.width, canvas.height, t));
-
-      // 반짝이는 점
-      drawSparks(t);
+      // 레이어를 뒤에서 앞으로 그리기
+      layers.forEach((layer) => drawAuroraLayer(layer, canvas.width, canvas.height));
 
       animId = requestAnimationFrame(animate);
     }
@@ -135,7 +77,7 @@ export default function RainBackground() {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none"
-      style={{ zIndex: 1 }}
+      style={{ zIndex: 1, mixBlendMode: "screen" }}
     />
   );
 }

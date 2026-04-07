@@ -138,7 +138,7 @@ export async function POST(request, { params }) {
       return { ...ms, contribution_score: ai.contribution_score ?? ms.task_completion_rate, highlights: ai.highlights ?? [], concerns: ai.concerns ?? [] };
     });
 
-    return Response.json({
+    const report = {
       summary: aiResult.summary ?? "분석을 완료했습니다.",
       overall_health: aiResult.overall_health ?? "warning",
       team_dynamic: aiResult.team_dynamic ?? "",
@@ -146,7 +146,14 @@ export async function POST(request, { params }) {
       risks: aiResult.risks ?? [],
       priorities: aiResult.priorities ?? [],
       generated_at: new Date().toISOString(),
-    });
+    };
+
+    // 보관함 자동 저장
+    const now = new Date();
+    const title = `집계 리포트 — ${now.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })} ${now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}`;
+    await supabase.from("ai_artifacts").insert({ project_id: id, type: "aggregate", title, content: report });
+
+    return Response.json(report);
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }

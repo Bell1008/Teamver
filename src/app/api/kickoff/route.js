@@ -49,6 +49,20 @@ export async function POST(request) {
     );
     if (msErr) throw msErr;
 
+    // 보관함 자동 저장
+    const now = new Date();
+    const title = `킥오프 — ${now.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })} ${now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}`;
+    await supabase.from("ai_artifacts").insert({
+      project_id,
+      type: "kickoff",
+      title,
+      content: {
+        role_assignments: result.role_assignments,
+        milestones: result.milestones,
+        member_count: members.length,
+      },
+    });
+
     return Response.json(result, { status: 201 });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });

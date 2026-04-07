@@ -65,14 +65,19 @@ export async function POST(request, { params }) {
     // AI 메세지로 저장
     const { data: saved } = await supabase
       .from("messages")
-      .insert({
-        project_id: id,
-        member_name: label,
-        content: aiText,
-        is_ai: true,
-      })
+      .insert({ project_id: id, member_name: label, content: aiText, is_ai: true })
       .select()
       .single();
+
+    // 보관함 자동 저장
+    const now = new Date();
+    const artifactTitle = `${mode === "minutes" ? "회의록" : "AI 요약"} — ${now.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })} ${now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}`;
+    await supabase.from("ai_artifacts").insert({
+      project_id: id,
+      type: mode === "minutes" ? "minutes" : "summary",
+      title: artifactTitle,
+      content: { text: aiText, source_message_count: messages.length },
+    });
 
     return Response.json({ message: saved });
   } catch (err) {
