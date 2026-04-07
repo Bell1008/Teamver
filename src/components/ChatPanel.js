@@ -102,7 +102,7 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
       />
 
       <div
-        className="fixed inset-y-0 right-0 w-full sm:w-[360px] flex flex-col z-40"
+        className="fixed inset-y-0 right-0 w-full sm:w-[360px] flex flex-col z-40 chat-enter"
         style={{
           backgroundColor: "#fff",
           borderLeft: "1px solid rgba(0,0,0,0.08)",
