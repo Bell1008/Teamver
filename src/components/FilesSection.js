@@ -74,11 +74,15 @@ export default function FilesSection({ projectId, memberId, memberName }) {
   };
 
   return (
-    <section className="bg-white rounded-2xl p-5" style={{ border: "1px solid rgba(37,99,235,0.08)", boxShadow: "0 2px 16px rgba(37,99,235,0.04)" }}>
+    <section className="rounded-2xl p-5"
+      style={{ background:"white", border: "1px solid rgba(37,99,235,0.1)", boxShadow: "0 4px 24px rgba(37,99,235,0.08), 0 1px 4px rgba(37,99,235,0.04)" }}>
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="font-semibold text-gray-800">파일 자료실</h2>
-          <p className="text-xs text-gray-400 mt-0.5">사진, 문서, 자료 등을 공유하세요</p>
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-4 rounded-full" style={{ background: `linear-gradient(180deg, ${ACCENT}, #1d4ed8)` }}/>
+          <div>
+            <h2 className="font-semibold text-gray-800">파일 자료실</h2>
+            <p className="text-xs text-gray-400 mt-0.5">사진, 문서, 자료 등을 공유하세요</p>
+          </div>
         </div>
         <label className={`btn-jelly flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`}
           style={{ backgroundColor: "rgba(37,99,235,0.08)", color: ACCENT }}>

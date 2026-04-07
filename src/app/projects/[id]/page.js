@@ -180,15 +180,33 @@ export default function ProjectDashboard() {
   const myName = myMember?.name ?? null;
   const isAdmin = myMember?.is_admin ?? false;
 
+  // 멤버 아바타 색상 — 인덱스마다 다른 색
+  const AVATAR_GRADIENTS = [
+    "linear-gradient(135deg,#2563eb,#1d4ed8)",
+    "linear-gradient(135deg,#7c3aed,#6d28d9)",
+    "linear-gradient(135deg,#0891b2,#0e7490)",
+    "linear-gradient(135deg,#059669,#047857)",
+    "linear-gradient(135deg,#d97706,#b45309)",
+    "linear-gradient(135deg,#db2777,#be185d)",
+  ];
+
   return (
-    <main className="page-water min-h-screen">
+    <main className="page-water min-h-screen relative overflow-x-hidden">
+      {/* 배경 물방울 데코 */}
+      <div className="fixed pointer-events-none" aria-hidden style={{top:"-60px",right:"-80px",width:320,height:370,opacity:0.055,zIndex:0}}>
+        <svg viewBox="0 0 320 370" fill="none"><path d="M160 10C160 10 30 130 30 220C30 300 87 360 160 360C233 360 290 300 290 220C290 130 160 10 160 10Z" fill={ACCENT}/></svg>
+      </div>
+      <div className="fixed pointer-events-none" aria-hidden style={{bottom:"-40px",left:"-60px",width:240,height:280,opacity:0.04,zIndex:0}}>
+        <svg viewBox="0 0 240 280" fill="none"><path d="M120 8C120 8 20 100 20 168C20 228 65 272 120 272C175 272 220 228 220 168C220 100 120 8 120 8Z" fill={ACCENT}/></svg>
+      </div>
+
       {/* 채팅 */}
       <ChatPanel projectId={id} myMemberId={myMemberId} myName={myName} accentColor={ACCENT} isOpen={chatOpen} onClose={() => setChatOpen(false)} />
 
       {/* 채팅 버튼 */}
       {!chatOpen && (
         <button onClick={() => setChatOpen(true)} className="btn-jelly fixed bottom-6 right-6 z-30 rounded-2xl text-white flex items-center justify-center"
-          style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow:`0 4px 20px rgba(37,99,235,0.45)`, width:52, height:52 }}>
+          style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow:`0 4px 20px rgba(37,99,235,0.5)`, width:52, height:52 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         </button>
       )}
@@ -270,51 +288,84 @@ export default function ProjectDashboard() {
         </div>
       )}
 
-      {/* 헤더 */}
-      <header className="bg-white border-b px-6 py-4 sticky top-0 z-20" style={{ borderColor:"rgba(37,99,235,0.08)", boxShadow:"0 2px 16px rgba(37,99,235,0.06)" }}>
-        <div className="max-w-3xl mx-auto flex justify-between items-center">
-          <div>
-            <button onClick={()=>router.push("/home")} className="btn-jelly flex items-center gap-1 text-xs text-gray-400 hover:text-blue-500 mb-1 transition-colors">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-              마이페이지
-            </button>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-gray-900">{project.title}</h1>
-              {isOwner && <button onClick={openEdit} className="btn-jelly text-xs text-gray-400 hover:text-blue-600 border border-gray-200 rounded-lg px-2 py-0.5 transition-colors">수정</button>}
+      {/* ── 헤더 배너 ── */}
+      <header className="relative z-10 px-6 pt-5 pb-6 overflow-hidden"
+        style={{ background:`linear-gradient(135deg, ${ACCENT} 0%, #1d4ed8 60%, #312e81 100%)`, boxShadow:"0 4px 32px rgba(37,99,235,0.35)" }}>
+        {/* 배너 내부 물방울 deco */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
+          <div style={{position:"absolute",top:"-30px",right:"60px",width:120,height:140,borderRadius:"50% 50% 50% 50%/60% 60% 40% 40%",background:"rgba(255,255,255,0.06)"}}/>
+          <div style={{position:"absolute",bottom:"-20px",right:"10px",width:80,height:90,borderRadius:"50% 50% 50% 50%/60% 60% 40% 40%",background:"rgba(255,255,255,0.04)"}}/>
+        </div>
+
+        <div className="max-w-3xl mx-auto relative">
+          <button onClick={()=>router.push("/home")} className="btn-jelly flex items-center gap-1 text-xs text-white/60 hover:text-white mb-3 transition-colors">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            마이페이지
+          </button>
+          <div className="flex justify-between items-start gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-white leading-tight">{project.title}</h1>
+                {isOwner && (
+                  <button onClick={openEdit}
+                    className="btn-jelly text-xs text-white/70 hover:text-white border rounded-lg px-2.5 py-1 transition-colors shrink-0"
+                    style={{borderColor:"rgba(255,255,255,0.25)",backgroundColor:"rgba(255,255,255,0.1)"}}>
+                    수정
+                  </button>
+                )}
+              </div>
+              <p className="text-white/55 text-xs mt-1">{project.subject} · {formatDuration(project.duration_value, project.duration_unit)}</p>
+              <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                <span className="text-xs px-2.5 py-1 rounded-full font-medium"
+                  style={{backgroundColor:"rgba(255,255,255,0.15)",color:"white"}}>
+                  {humanMembers.length}명 참여
+                </span>
+                {kickoffDone && <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{backgroundColor:"rgba(74,222,128,0.2)",color:"#86efac"}}>킥오프 완료</span>}
+                {isOwner && <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{backgroundColor:"rgba(255,255,255,0.12)",color:"rgba(255,255,255,0.8)"}}>방장</span>}
+                {isAdmin && !isOwner && <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{backgroundColor:"rgba(167,139,250,0.2)",color:"#c4b5fd"}}>관리자</span>}
+              </div>
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">{project.subject} · {formatDuration(project.duration_value, project.duration_unit)}</p>
-          </div>
-          <div className="text-right">
-            {daysLeft === null ? <p className="text-sm font-medium text-gray-400">기한 없음</p> : (
-              <><p className="text-2xl font-bold tabular-nums" style={{color:ACCENT}}>D-{daysLeft}</p><p className="text-xs text-gray-400">마감까지</p></>
-            )}
+            <div className="text-right shrink-0">
+              {daysLeft === null ? (
+                <p className="text-white/50 text-sm font-medium">기한 없음</p>
+              ) : (
+                <>
+                  <p className="text-3xl font-black text-white tabular-nums leading-none">D-{daysLeft}</p>
+                  <p className="text-white/50 text-xs mt-1">마감까지</p>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+      <div className="max-w-3xl mx-auto px-4 py-5 space-y-4 relative z-10">
 
         {/* 초대/킥오프 (방장) */}
         {isOwner && (
-          <section className="bg-white rounded-2xl p-5 space-y-4" style={{border:"1px solid rgba(37,99,235,0.08)",boxShadow:"0 2px 16px rgba(37,99,235,0.04)"}}>
+          <section className="rounded-2xl p-5 space-y-4"
+            style={{background:"white",border:"1px solid rgba(37,99,235,0.1)",boxShadow:"0 4px 24px rgba(37,99,235,0.08), 0 1px 4px rgba(37,99,235,0.04)"}}>
             <div className="flex justify-between items-center">
-              <h2 className="font-semibold text-gray-800">팀원 초대</h2>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{backgroundColor:"rgba(37,99,235,0.08)",color:ACCENT}}>{humanMembers.length}명 참여</span>
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-4 rounded-full" style={{background:`linear-gradient(180deg, ${ACCENT}, #1d4ed8)`}}/>
+                <h2 className="font-semibold text-gray-800">팀원 초대</h2>
+              </div>
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{backgroundColor:"rgba(37,99,235,0.08)",color:ACCENT}}>{humanMembers.length}명 참여</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex-1 rounded-xl px-4 py-2.5" style={{backgroundColor:"rgba(37,99,235,0.04)",border:"1px solid rgba(37,99,235,0.1)"}}>
+              <div className="flex-1 rounded-xl px-4 py-2.5" style={{background:"linear-gradient(135deg,rgba(37,99,235,0.04),rgba(37,99,235,0.06))",border:"1px solid rgba(37,99,235,0.12)"}}>
                 <p className="text-xs text-gray-400 mb-0.5">초대 코드</p>
-                <p className="font-mono font-bold text-lg tracking-widest" style={{color:ACCENT}}>{project.invite_code}</p>
+                <p className="font-mono font-black text-xl tracking-[0.25em]" style={{color:ACCENT}}>{project.invite_code}</p>
               </div>
-              <button onClick={()=>handleCopy(inviteUrl)} className="btn-jelly drop-btn px-4 py-2.5 rounded-xl text-sm">{copied?"복사됨!":"링크 복사"}</button>
+              <button onClick={()=>handleCopy(inviteUrl)} className="btn-jelly drop-btn px-4 py-3 rounded-xl text-sm shrink-0">{copied?"복사됨!":"링크 복사"}</button>
             </div>
             {!kickoffDone ? (
               <button onClick={handleKickoff} disabled={kickoffLoading||humanMembers.length===0}
-                className="btn-jelly drop-btn w-full py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50">
+                className="btn-jelly drop-btn w-full py-3 rounded-xl text-sm font-semibold disabled:opacity-50">
                 {kickoffLoading?"AI 역할 설계 중... (10~20초)":`AI 킥오프 실행 (${humanMembers.length}명) — 기획안 참고`}
               </button>
             ) : (
-              <div className="flex items-center gap-2 justify-center py-1">
+              <div className="flex items-center gap-2 justify-center py-1.5 rounded-xl" style={{backgroundColor:"rgba(74,222,128,0.08)",border:"1px solid rgba(74,222,128,0.2)"}}>
                 <div className="w-2 h-2 rounded-full bg-green-400"/>
                 <p className="text-sm text-green-600 font-medium">킥오프 완료 — 역할 및 마일스톤이 설계되었습니다.</p>
               </div>
@@ -323,66 +374,89 @@ export default function ProjectDashboard() {
         )}
 
         {!isOwner && !myMemberId && (
-          <section className="rounded-xl p-4 text-center" style={{backgroundColor:"rgba(37,99,235,0.05)",border:"1px solid rgba(37,99,235,0.12)"}}>
-            <p className="text-sm font-medium" style={{color:ACCENT}}>초대 링크로 참여하셨나요?</p>
+          <section className="rounded-xl p-4 text-center" style={{background:"linear-gradient(135deg,rgba(37,99,235,0.06),rgba(99,102,241,0.06))",border:"1px solid rgba(37,99,235,0.15)"}}>
+            <p className="text-sm font-semibold" style={{color:ACCENT}}>초대 링크로 참여하셨나요?</p>
             <p className="text-xs text-gray-500 mt-1">초대 링크 → 참여하기를 완료해주세요.</p>
           </section>
         )}
 
-        {/* 기획안 */}
-        <PlanningDocs projectId={id} memberId={myMemberId} memberName={myName} canUpload={isOwner||isAdmin} />
-
         {/* 프로젝트 목표 */}
-        <section className="bg-white rounded-2xl p-5" style={{border:"1px solid rgba(37,99,235,0.08)",boxShadow:"0 2px 16px rgba(37,99,235,0.04)"}}>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">프로젝트 목표</p>
-          <p className="text-gray-800 font-medium">{project.goal}</p>
+        <section className="rounded-2xl p-5"
+          style={{background:"white",border:"1px solid rgba(37,99,235,0.1)",boxShadow:"0 4px 24px rgba(37,99,235,0.08), 0 1px 4px rgba(37,99,235,0.04)"}}>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-1 h-4 rounded-full" style={{background:`linear-gradient(180deg, ${ACCENT}, #1d4ed8)`}}/>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">프로젝트 목표</p>
+          </div>
+          <p className="text-gray-800 font-medium leading-relaxed">{project.goal}</p>
           {kickoffDone && project.duration_weeks > 0 && (
             <div className="mt-4">
-              <div className="flex justify-between text-xs text-gray-400 mb-1.5"><span>{currentWeek}주차</span><span>총 {project.duration_weeks}주</span></div>
-              <div className="w-full bg-gray-100 rounded-full h-2">
-                <div className="h-2 rounded-full transition-all duration-700" style={{width:`${Math.min((currentWeek/project.duration_weeks)*100,100)}%`,background:`linear-gradient(90deg, ${ACCENT}, #1d4ed8)`}}/>
+              <div className="flex justify-between text-xs text-gray-400 mb-1.5">
+                <span className="font-medium" style={{color:ACCENT}}>{currentWeek}주차 진행 중</span>
+                <span>총 {project.duration_weeks}주</span>
+              </div>
+              <div className="w-full rounded-full h-2.5" style={{backgroundColor:"rgba(37,99,235,0.08)"}}>
+                <div className="h-2.5 rounded-full transition-all duration-700" style={{width:`${Math.min((currentWeek/project.duration_weeks)*100,100)}%`,background:`linear-gradient(90deg, ${ACCENT}, #1d4ed8)`,boxShadow:`0 0 8px rgba(37,99,235,0.4)`}}/>
               </div>
             </div>
           )}
         </section>
 
+        {/* 기획안 */}
+        <PlanningDocs projectId={id} memberId={myMemberId} memberName={myName} canUpload={isOwner||isAdmin} />
+
         {/* 팀원 카드 */}
-        <section className="bg-white rounded-2xl p-5" style={{border:"1px solid rgba(37,99,235,0.08)",boxShadow:"0 2px 16px rgba(37,99,235,0.04)"}}>
-          <h2 className="font-semibold text-gray-800 mb-4">팀원 <span className="text-gray-400 font-normal text-sm">({humanMembers.length}명)</span></h2>
-          {humanMembers.length === 0 ? <p className="text-sm text-gray-400">아직 참여한 팀원이 없습니다.</p> : (
+        <section className="rounded-2xl p-5"
+          style={{background:"white",border:"1px solid rgba(37,99,235,0.1)",boxShadow:"0 4px 24px rgba(37,99,235,0.08), 0 1px 4px rgba(37,99,235,0.04)"}}>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-1 h-4 rounded-full" style={{background:`linear-gradient(180deg, ${ACCENT}, #1d4ed8)`}}/>
+            <h2 className="font-semibold text-gray-800">팀원 <span className="text-gray-400 font-normal text-sm">({humanMembers.length}명)</span></h2>
+          </div>
+          {humanMembers.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">아직 참여한 팀원이 없습니다.</p>
+          ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {humanMembers.map((m) => {
+              {humanMembers.map((m, idx) => {
                 const isMe = m.id === myMemberId;
+                const avatarGrad = AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length];
                 return (
                   <div key={m.id} onClick={()=>isMe&&openProfileEdit(m)}
-                    className={`rounded-xl p-3 transition-all ${isMe?"cursor-pointer hover:shadow-md":""}`}
-                    style={{border:"1px solid rgba(37,99,235,0.1)",backgroundColor:"rgba(37,99,235,0.03)"}}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-                        style={{background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`}}>
+                    className={`rounded-xl p-3.5 transition-all ${isMe?"cursor-pointer":""}`}
+                    style={{
+                      border: isMe ? `1.5px solid rgba(37,99,235,0.2)` : "1px solid rgba(37,99,235,0.08)",
+                      backgroundColor: isMe ? "rgba(37,99,235,0.03)" : "rgba(248,250,255,0.8)",
+                      boxShadow: isMe ? "0 2px 12px rgba(37,99,235,0.08)" : "none",
+                    }}>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+                        style={{background:avatarGrad,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>
                         {m.name[0]}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="text-sm font-semibold text-gray-900 truncate">{m.name}</p>
-                          {isMe&&<span className="text-xs px-1.5 py-0.5 rounded-md font-medium shrink-0" style={{backgroundColor:"rgba(37,99,235,0.1)",color:ACCENT}}>나</span>}
-                          {m.is_admin&&<span className="text-xs px-1.5 py-0.5 rounded-md font-medium text-purple-600 bg-purple-50 shrink-0">관리자</span>}
+                          {isMe&&<span className="text-xs px-1.5 py-0.5 rounded-md font-semibold shrink-0" style={{backgroundColor:"rgba(37,99,235,0.1)",color:ACCENT}}>나</span>}
+                          {m.is_admin&&<span className="text-xs px-1.5 py-0.5 rounded-md font-semibold text-purple-600 bg-purple-50 shrink-0">관리자</span>}
                         </div>
-                        <p className="text-xs text-gray-500 truncate">{m.role??"역할 미배정"}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">{m.role??"역할 미배정"}</p>
                       </div>
                       {isOwner && !isMe && (
                         <button onClick={(e)=>{e.stopPropagation();handleToggleAdmin(m);}}
-                          className="btn-jelly shrink-0 text-xs px-2 py-1 rounded-lg transition-colors"
-                          style={m.is_admin?{backgroundColor:"rgba(124,58,237,0.1)",color:"#7c3aed"}:{backgroundColor:"rgba(37,99,235,0.07)",color:ACCENT}}>
+                          className="btn-jelly shrink-0 text-xs px-2.5 py-1 rounded-lg font-medium transition-colors"
+                          style={m.is_admin?{backgroundColor:"rgba(124,58,237,0.1)",color:"#7c3aed",border:"1px solid rgba(124,58,237,0.15)"}:{backgroundColor:"rgba(37,99,235,0.07)",color:ACCENT,border:"1px solid rgba(37,99,235,0.12)"}}>
                           {m.is_admin?"해제":"관리자"}
                         </button>
                       )}
-                      {isMe&&<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-300 shrink-0"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}
+                      {isMe&&<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{color:"rgba(37,99,235,0.3)"}} className="shrink-0"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}
                     </div>
                     {m.skills?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {m.skills.slice(0,3).map((s)=><span key={s} className="text-xs px-1.5 py-0.5 rounded-md bg-gray-50 text-gray-500">{s}</span>)}
-                        {m.skills.length>3&&<span className="text-xs text-gray-400">+{m.skills.length-3}</span>}
+                      <div className="flex flex-wrap gap-1 mt-2.5">
+                        {m.skills.slice(0,4).map((s)=>(
+                          <span key={s} className="text-xs px-2 py-0.5 rounded-full font-medium"
+                            style={{backgroundColor:"rgba(37,99,235,0.06)",color:"#4b6bda",border:"1px solid rgba(37,99,235,0.1)"}}>
+                            {s}
+                          </span>
+                        ))}
+                        {m.skills.length>4&&<span className="text-xs text-gray-400 self-center">+{m.skills.length-4}</span>}
                       </div>
                     )}
                   </div>
@@ -399,16 +473,20 @@ export default function ProjectDashboard() {
 
         {/* 마일스톤 */}
         {kickoffDone && currentMilestone && (
-          <section className="bg-white rounded-2xl p-5" style={{border:"1px solid rgba(37,99,235,0.08)",boxShadow:"0 2px 16px rgba(37,99,235,0.04)"}}>
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="font-semibold text-gray-800">{currentMilestone.week}주차 마일스톤</h2>
-              <span className="text-xs px-2.5 py-1 rounded-full text-white font-medium" style={{background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`}}>{currentMilestone.title}</span>
+          <section className="rounded-2xl p-5"
+            style={{background:"white",border:"1px solid rgba(37,99,235,0.1)",boxShadow:"0 4px 24px rgba(37,99,235,0.08), 0 1px 4px rgba(37,99,235,0.04)"}}>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-4 rounded-full" style={{background:`linear-gradient(180deg, ${ACCENT}, #1d4ed8)`}}/>
+                <h2 className="font-semibold text-gray-800">{currentMilestone.week}주차 마일스톤</h2>
+              </div>
+              <span className="text-xs px-2.5 py-1 rounded-full text-white font-semibold" style={{background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`,boxShadow:`0 2px 8px rgba(37,99,235,0.3)`}}>{currentMilestone.title}</span>
             </div>
             <ul className="space-y-2">
               {(currentMilestone.tasks??[]).map((task,i)=>(
-                <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                  <span className="mt-0.5 w-4 h-4 rounded border border-gray-200 flex-shrink-0"/>
-                  {task}
+                <li key={i} className="flex items-start gap-2.5 text-sm text-gray-600 py-1">
+                  <div className="mt-0.5 w-4 h-4 rounded-md border-2 flex-shrink-0" style={{borderColor:"rgba(37,99,235,0.2)",backgroundColor:"rgba(37,99,235,0.03)"}}/>
+                  <span className="leading-relaxed">{task}</span>
                 </li>
               ))}
             </ul>
@@ -418,6 +496,7 @@ export default function ProjectDashboard() {
         {/* 파일 자료실 */}
         <FilesSection projectId={id} memberId={myMemberId} memberName={myName} />
 
+        <div className="h-4"/>
       </div>
 
       <style>{`
