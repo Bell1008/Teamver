@@ -42,10 +42,13 @@ export default function ProjectDashboard() {
   const [saving, setSaving]         = useState(false);
   const [deleting, setDeleting]     = useState(false);
 
-  // 프로필 수정
+  // 내 프로필 수정
   const [profileEdit, setProfileEdit]   = useState(null);
   const [profileForm, setProfileForm]   = useState(null);
   const [profileSaving, setProfileSaving] = useState(false);
+
+  // 다른 멤버 프로필 보기
+  const [viewMember, setViewMember] = useState(null);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -404,67 +407,137 @@ export default function ProjectDashboard() {
         {/* 기획안 */}
         <PlanningDocs projectId={id} memberId={myMemberId} memberName={myName} canUpload={isOwner||isAdmin} />
 
-        {/* 팀원 카드 */}
-        <section className="rounded-2xl p-5"
+        {/* 팀원 — 컴팩트 아이콘 행 */}
+        <section className="rounded-2xl px-5 py-4"
           style={{background:"white",border:"1px solid rgba(37,99,235,0.1)",boxShadow:"0 4px 24px rgba(37,99,235,0.08), 0 1px 4px rgba(37,99,235,0.04)"}}>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-1 h-4 rounded-full" style={{background:`linear-gradient(180deg, ${ACCENT}, #1d4ed8)`}}/>
-            <h2 className="font-semibold text-gray-800">팀원 <span className="text-gray-400 font-normal text-sm">({humanMembers.length}명)</span></h2>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-4 rounded-full" style={{background:`linear-gradient(180deg, ${ACCENT}, #1d4ed8)`}}/>
+              <h2 className="font-semibold text-gray-800">팀원 <span className="text-gray-400 font-normal text-sm">({humanMembers.length}명)</span></h2>
+            </div>
           </div>
           {humanMembers.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">아직 참여한 팀원이 없습니다.</p>
+            <p className="text-sm text-gray-400 text-center py-2">아직 참여한 팀원이 없습니다.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-wrap gap-2">
               {humanMembers.map((m, idx) => {
                 const isMe = m.id === myMemberId;
                 const avatarGrad = AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length];
                 return (
-                  <div key={m.id} onClick={()=>isMe&&openProfileEdit(m)}
-                    className={`rounded-xl p-3.5 transition-all ${isMe?"cursor-pointer":""}`}
+                  <button key={m.id}
+                    onClick={() => isMe ? openProfileEdit(m) : setViewMember(m)}
+                    className="btn-jelly flex items-center gap-2 px-3 py-2 rounded-xl transition-all"
                     style={{
-                      border: isMe ? `1.5px solid rgba(37,99,235,0.2)` : "1px solid rgba(37,99,235,0.08)",
-                      backgroundColor: isMe ? "rgba(37,99,235,0.03)" : "rgba(248,250,255,0.8)",
-                      boxShadow: isMe ? "0 2px 12px rgba(37,99,235,0.08)" : "none",
+                      backgroundColor: isMe ? "rgba(37,99,235,0.06)" : "rgba(248,250,255,0.9)",
+                      border: isMe ? "1.5px solid rgba(37,99,235,0.2)" : "1px solid rgba(37,99,235,0.1)",
                     }}>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-                        style={{background:avatarGrad,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>
-                        {m.name[0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="text-sm font-semibold text-gray-900 truncate">{m.name}</p>
-                          {isMe&&<span className="text-xs px-1.5 py-0.5 rounded-md font-semibold shrink-0" style={{backgroundColor:"rgba(37,99,235,0.1)",color:ACCENT}}>나</span>}
-                          {m.is_admin&&<span className="text-xs px-1.5 py-0.5 rounded-md font-semibold text-purple-600 bg-purple-50 shrink-0">관리자</span>}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-0.5 truncate">{m.role??"역할 미배정"}</p>
-                      </div>
-                      {isOwner && !isMe && (
-                        <button onClick={(e)=>{e.stopPropagation();handleToggleAdmin(m);}}
-                          className="btn-jelly shrink-0 text-xs px-2.5 py-1 rounded-lg font-medium transition-colors"
-                          style={m.is_admin?{backgroundColor:"rgba(124,58,237,0.1)",color:"#7c3aed",border:"1px solid rgba(124,58,237,0.15)"}:{backgroundColor:"rgba(37,99,235,0.07)",color:ACCENT,border:"1px solid rgba(37,99,235,0.12)"}}>
-                          {m.is_admin?"해제":"관리자"}
-                        </button>
-                      )}
-                      {isMe&&<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{color:"rgba(37,99,235,0.3)"}} className="shrink-0"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                      style={{background:avatarGrad,boxShadow:"0 1px 5px rgba(0,0,0,0.15)"}}>
+                      {m.name[0]}
                     </div>
-                    {m.skills?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2.5">
-                        {m.skills.slice(0,4).map((s)=>(
-                          <span key={s} className="text-xs px-2 py-0.5 rounded-full font-medium"
-                            style={{backgroundColor:"rgba(37,99,235,0.06)",color:"#4b6bda",border:"1px solid rgba(37,99,235,0.1)"}}>
-                            {s}
-                          </span>
-                        ))}
-                        {m.skills.length>4&&<span className="text-xs text-gray-400 self-center">+{m.skills.length-4}</span>}
+                    <div className="text-left">
+                      <div className="flex items-center gap-1">
+                        <p className="text-xs font-semibold text-gray-800 leading-tight">{m.name}</p>
+                        {isMe && <span className="text-xs font-bold" style={{color:ACCENT}}>나</span>}
+                        {m.is_admin && <span className="text-xs font-semibold text-purple-500">·관리자</span>}
                       </div>
-                    )}
-                  </div>
+                      {m.role && <p className="text-xs text-gray-400 leading-tight max-w-[90px] truncate">{m.role}</p>}
+                    </div>
+                  </button>
                 );
               })}
             </div>
           )}
         </section>
+
+        {/* 멤버 프로필 모달 (다른 사람 보기) */}
+        {viewMember && (() => {
+          const vm = viewMember;
+          const vmIdx = humanMembers.findIndex((m) => m.id === vm.id);
+          const avatarGrad = AVATAR_GRADIENTS[vmIdx % AVATAR_GRADIENTS.length];
+          return (
+            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+              onClick={(e) => e.target === e.currentTarget && setViewMember(null)}>
+              <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+                {/* 헤더 배너 */}
+                <div className="px-6 pt-6 pb-5 relative" style={{background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`}}>
+                  <button onClick={() => setViewMember(null)}
+                    className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/15 transition-colors">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black text-white"
+                      style={{background:avatarGrad,boxShadow:"0 4px 16px rgba(0,0,0,0.2)"}}>
+                      {vm.name[0]}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg font-bold text-white">{vm.name}</h3>
+                        {vm.is_admin && <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{backgroundColor:"rgba(167,139,250,0.3)",color:"#e9d5ff"}}>관리자</span>}
+                      </div>
+                      <p className="text-white/60 text-xs mt-0.5">{vm.role ?? "역할 미배정"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 바디 */}
+                <div className="px-6 py-4 space-y-4">
+                  {/* 스킬 */}
+                  {vm.skills?.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">보유 스킬</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {vm.skills.map((s) => (
+                          <span key={s} className="text-xs px-2.5 py-1 rounded-full font-medium"
+                            style={{backgroundColor:"rgba(37,99,235,0.07)",color:ACCENT,border:"1px solid rgba(37,99,235,0.12)"}}>
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 성향 */}
+                  {vm.personality && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">성향</p>
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                        style={{backgroundColor:"rgba(37,99,235,0.04)",border:"1px solid rgba(37,99,235,0.08)"}}>
+                        <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{backgroundColor:ACCENT}}/>
+                        <p className="text-sm text-gray-700">{vm.personality}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 액션 버튼 */}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => { showToast("개인 메시지 기능은 준비 중입니다."); setViewMember(null); }}
+                      className="btn-jelly flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white"
+                      style={{background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`,boxShadow:`0 3px 12px rgba(37,99,235,0.3)`}}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                      개인 메시지
+                    </button>
+                    {isOwner && (
+                      <button
+                        onClick={() => { handleToggleAdmin(vm); setViewMember(null); }}
+                        className="btn-jelly px-4 py-2.5 rounded-xl text-sm font-semibold"
+                        style={vm.is_admin
+                          ? {backgroundColor:"rgba(124,58,237,0.1)",color:"#7c3aed",border:"1px solid rgba(124,58,237,0.2)"}
+                          : {backgroundColor:"rgba(37,99,235,0.07)",color:ACCENT,border:"1px solid rgba(37,99,235,0.15)"}}>
+                        {vm.is_admin ? "관리자 해제" : "관리자 지정"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 할일 블록 */}
         {humanMembers.length > 0 && (
