@@ -4,7 +4,7 @@ export async function PATCH(request, { params }) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const allowed = ["title", "description", "status"];
+    const allowed = ["title", "description", "status", "progress"];
     const updates = Object.fromEntries(Object.entries(body).filter(([k]) => allowed.includes(k)));
     updates.updated_at = new Date().toISOString();
 
