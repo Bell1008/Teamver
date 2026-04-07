@@ -253,7 +253,11 @@ function MessageView({ thread, myUserId, onBack }) {
         const m = payload.new;
         const ok = (m.sender_id === myUserId && m.recipient_id === thread.partnerId)
                 || (m.sender_id === thread.partnerId && m.recipient_id === myUserId);
-        if (ok) { setMessages((prev) => [...prev, m]); if (m.sender_id === thread.partnerId) markRead(); }
+        if (ok) {
+          // 이미 optimistic update로 추가된 메시지 중복 방지
+          setMessages((prev) => prev.some((p) => p.id === m.id) ? prev : [...prev.filter((p) => !p.id.startsWith("tmp-") || p.sender_id !== m.sender_id), m]);
+          if (m.sender_id === thread.partnerId) markRead();
+        }
       })
       .subscribe();
     return () => supabase.removeChannel(channel);
@@ -291,12 +295,21 @@ function MessageView({ thread, myUserId, onBack }) {
     setSending(true);
     const content = input.trim();
     setInput("");
+    // optimistic update — realtime이 늦거나 꺼진 경우에도 즉시 표시
+    const tempMsg = { id: `tmp-${Date.now()}`, sender_id: myUserId, recipient_id: thread.partnerId, content, created_at: new Date().toISOString(), read: false };
+    setMessages((prev) => [...prev, tempMsg]);
     try {
-      await fetch("/api/dm", {
+      const res = await fetch("/api/dm", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sender_id: myUserId, recipient_id: thread.partnerId, content }),
       });
-    } finally { setSending(false); inputRef.current?.focus(); }
+      // 서버 저장 성공 시 실제 메시지로 교체 (id 동기화)
+      if (res.ok) {
+        const saved = await res.json();
+        if (saved?.id) setMessages((prev) => prev.map((m) => m.id === tempMsg.id ? saved : m));
+      }
+    } catch { /* 실패해도 임시 메시지는 유지 */ }
+    finally { setSending(false); inputRef.current?.focus(); }
   };
 
   const partnerInitial = thread.username[0]?.toUpperCase() ?? "?";

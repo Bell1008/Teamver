@@ -7,6 +7,7 @@ import ProjectsTab from "@/components/tabs/ProjectsTab";
 import MessagesTab from "@/components/tabs/MessagesTab";
 import NotificationsTab from "@/components/tabs/NotificationsTab";
 import SettingsTab from "@/components/tabs/SettingsTab";
+import MyInfoTab from "@/components/tabs/MyInfoTab";
 
 const ACCENT = "#2563eb";
 
@@ -110,9 +111,9 @@ function HomePage() {
           })}
         </nav>
 
-        {/* 유저 — 클릭 시 설정 이동 */}
+        {/* 유저 — 클릭 시 내 정보 이동 */}
         <div className="p-3 border-t" style={{ borderColor: "rgba(37,99,235,0.07)" }}>
-          <button onClick={() => setActiveTab("settings")}
+          <button onClick={() => setActiveTab("profile")}
             className="btn-jelly hidden sm:flex w-full items-center gap-2.5 px-2 py-1.5 mb-1 rounded-xl hover:bg-gray-50 transition-colors text-left">
             <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
               style={{ background: `linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow: `0 2px 8px rgba(37,99,235,0.3)` }}>
@@ -139,7 +140,8 @@ function HomePage() {
         {activeTab === "projects"      && <ProjectsTab userId={userId} accentColor={ACCENT} />}
         {activeTab === "messages"      && <MessagesTab userId={userId} initialPartnerId={dmTarget?.partnerId} initialPartnerName={dmTarget?.partnerName} onUnreadChange={setUnreadDm} />}
         {activeTab === "notifications" && <NotificationsTab />}
-        {activeTab === "settings"      && <SettingsTab profile={profile} />}
+        {activeTab === "settings"      && <SettingsTab />}
+        {activeTab === "profile"       && <MyInfoTab profile={profile} userId={userId} onProfileUpdate={setProfile} />}
       </main>
     </div>
   );
