@@ -53,7 +53,13 @@ export default function PlanningDocs({ projectId, memberId, memberName, canUploa
     if (Array.isArray(data)) setDocs(data);
   }, [projectId]);
 
-  useEffect(() => { fetchDocs(); }, [fetchDocs]);
+  useEffect(() => {
+    fetchDocs();
+    const ch = supabase.channel(`planning-${projectId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_files", filter: `project_id=eq.${projectId}` }, fetchDocs)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [projectId, fetchDocs]);
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];

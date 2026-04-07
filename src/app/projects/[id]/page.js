@@ -9,8 +9,7 @@ import TasksSection from "@/components/TasksSection";
 import PlanningDocs from "@/components/PlanningDocs";
 import FilesSection from "@/components/FilesSection";
 
-const SKILLS = ["React","Vue","Next.js","Node.js","Python","Java","Spring","DB 설계","UI/UX 디자인","기획/PM","데이터 분석","문서화"];
-const PERSONALITIES = ["꼼꼼하고 완성도를 중시","논리적이고 문서화를 잘함","창의적이고 아이디어가 많음","리더십이 강하고 추진력 있음","협력적이고 팀워크를 중시"];
+const DEFAULT_SKILLS = ["React","Vue","Next.js","Node.js","Python","Java","Spring","DB 설계","UI/UX 디자인","기획/PM","데이터 분석","문서화","Flutter","Swift","Kotlin","TypeScript","Go","C++","DevOps","Figma"];
 const UNIT_OPTIONS = [
   { value:"hours",label:"시간"},{value:"days",label:"일"},{value:"weeks",label:"주"},
   {value:"months",label:"달"},{value:"years",label:"년"},{value:null,label:"기한 없음"},
@@ -42,12 +41,13 @@ export default function ProjectDashboard() {
   const [saving, setSaving]         = useState(false);
   const [deleting, setDeleting]     = useState(false);
 
-  // 내 프로필 수정
+  // 프로필 수정 (본인 + 관리자가 타인 수정도 여기서)
   const [profileEdit, setProfileEdit]   = useState(null);
   const [profileForm, setProfileForm]   = useState(null);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [skillInput, setSkillInput]     = useState("");
 
-  // 다른 멤버 프로필 보기
+  // 다른 멤버 프로필 보기 (비관리자용 read-only)
   const [viewMember, setViewMember] = useState(null);
 
   const showToast = useCallback((msg) => {
@@ -157,15 +157,25 @@ export default function ProjectDashboard() {
 
   const openProfileEdit = (member) => {
     setProfileEdit(member);
-    setProfileForm({ name: member.name, skills: member.skills ?? [], personality: member.personality ?? "" });
+    setProfileForm({ name: member.name, role: member.role ?? "", skills: member.skills ?? [], personality: member.personality ?? "" });
+    setSkillInput("");
+  };
+
+  const addSkillToForm = (s) => {
+    const trimmed = s.trim();
+    if (!trimmed) return;
+    setProfileForm((prev) => prev.skills.includes(trimmed) ? prev : { ...prev, skills: [...prev.skills, trimmed] });
+    setSkillInput("");
   };
 
   const handleSaveProfile = async () => {
     setProfileSaving(true);
     try {
-      const res = await fetch(`/api/members/${profileEdit.id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify(profileForm) });
+      const body = { name: profileForm.name, skills: profileForm.skills, personality: profileForm.personality, role: profileForm.role || null };
+      const res = await fetch(`/api/members/${profileEdit.id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
       if (!res.ok) throw new Error("저장 실패");
-      if (profileForm.name !== profileEdit.name) localStorage.setItem(`member_name_${id}`, profileForm.name);
+      // 내 이름 변경 시 로컬 캐시 갱신
+      if (profileEdit.id === myMemberId && profileForm.name !== profileEdit.name) localStorage.setItem(`member_name_${id}`, profileForm.name);
       await fetchData(); setProfileEdit(null); showToast("프로필이 업데이트되었습니다");
     } catch (e) { alert(e.message); }
     finally { setProfileSaving(false); }
@@ -204,7 +214,7 @@ export default function ProjectDashboard() {
       </div>
 
       {/* 채팅 */}
-      <ChatPanel projectId={id} myMemberId={myMemberId} myName={myName} accentColor={ACCENT} isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+      <ChatPanel projectId={id} myMemberId={myMemberId} myName={myName} accentColor={ACCENT} isOpen={chatOpen} onClose={() => setChatOpen(false)} canUseAI={isOwner || isAdmin} />
 
       {/* 채팅 버튼 */}
       {!chatOpen && (
@@ -256,40 +266,94 @@ export default function ProjectDashboard() {
         </div>
       )}
 
-      {/* 프로필 수정 모달 */}
-      {profileEdit && profileForm && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setProfileEdit(null)}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-gray-900">내 프로필 수정</h2>
-            <div><label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">이름</label><input className="input-drop w-full border border-blue-100 rounded-xl px-3 py-2.5 text-sm" value={profileForm.name} onChange={(e)=>setProfileForm({...profileForm,name:e.target.value})}/></div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">스킬</label>
-              <div className="flex flex-wrap gap-1.5">
-                {SKILLS.map((s)=><button key={s} type="button" onClick={()=>setProfileForm((prev)=>({...prev,skills:prev.skills.includes(s)?prev.skills.filter((x)=>x!==s):[...prev.skills,s]}))}
-                  className="btn-jelly px-2.5 py-1 rounded-full text-xs border transition-all"
-                  style={profileForm.skills.includes(s)?{background:`linear-gradient(135deg,${ACCENT},#1d4ed8)`,color:"white",borderColor:"transparent"}:{borderColor:"rgba(37,99,235,0.12)",color:"#6b7280"}}>{s}</button>)}
+      {/* 프로필 수정 모달 (본인 + 관리자/방장이 타인 수정) */}
+      {profileEdit && profileForm && (() => {
+        const isEditingSelf = profileEdit.id === myMemberId;
+        const suggestions = DEFAULT_SKILLS.filter(
+          (s) => !profileForm.skills.includes(s) && (skillInput === "" || s.toLowerCase().includes(skillInput.toLowerCase()))
+        );
+        return (
+          <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setProfileEdit(null)}>
+            <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+              <h2 className="text-lg font-bold text-gray-900">
+                {isEditingSelf ? "내 프로필 수정" : `프로필 수정 — ${profileEdit.name}`}
+              </h2>
+
+              {/* 이름 */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">이름</label>
+                <input className="input-drop w-full border border-blue-100 rounded-xl px-3 py-2.5 text-sm" value={profileForm.name} onChange={(e)=>setProfileForm({...profileForm,name:e.target.value})}/>
               </div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">성향</label>
-              <div className="space-y-2">
-                {PERSONALITIES.map((p)=>(
-                  <label key={p} className="flex items-center gap-3 cursor-pointer">
-                    <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all" style={profileForm.personality===p?{borderColor:ACCENT,backgroundColor:ACCENT}:{borderColor:"rgba(37,99,235,0.2)"}} onClick={()=>setProfileForm({...profileForm,personality:p})}>
-                      {profileForm.personality===p&&<div className="w-1.5 h-1.5 rounded-full bg-white"/>}
-                    </div>
-                    <span className="text-sm text-gray-700" onClick={()=>setProfileForm({...profileForm,personality:p})}>{p}</span>
-                  </label>
-                ))}
+
+              {/* 역할 (킥오프 후 표시) */}
+              {kickoffDone && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">역할</label>
+                  <input className="input-drop w-full border border-blue-100 rounded-xl px-3 py-2.5 text-sm" placeholder="예) 프론트엔드 개발 · UI 설계" value={profileForm.role} onChange={(e)=>setProfileForm({...profileForm,role:e.target.value})}/>
+                </div>
+              )}
+
+              {/* 스킬 — 검색 + 직접 입력 */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wide">스킬</label>
+                {/* 선택된 스킬 태그 */}
+                {profileForm.skills.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {profileForm.skills.map((s)=>(
+                      <span key={s} className="flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-semibold text-white"
+                        style={{background:`linear-gradient(135deg,${ACCENT},#1d4ed8)`}}>
+                        {s}
+                        <button type="button" onClick={()=>setProfileForm((prev)=>({...prev,skills:prev.skills.filter((x)=>x!==s)}))}
+                          className="w-3.5 h-3.5 rounded-full flex items-center justify-center hover:bg-white/25 transition-colors">
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* 검색/입력 */}
+                <input
+                  className="input-drop w-full border border-blue-100 rounded-xl px-3 py-2 text-sm mb-2"
+                  placeholder="스킬 검색 또는 직접 입력 후 Enter…"
+                  value={skillInput}
+                  onChange={(e)=>setSkillInput(e.target.value)}
+                  onKeyDown={(e)=>{ if(e.key==="Enter"){e.preventDefault(); addSkillToForm(skillInput);} }}
+                />
+                {/* 추천 칩 */}
+                {suggestions.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {suggestions.map((s)=>(
+                      <button key={s} type="button" onClick={()=>addSkillToForm(s)}
+                        className="btn-jelly px-2.5 py-1 rounded-full text-xs border transition-all"
+                        style={{borderColor:"rgba(37,99,235,0.15)",color:"#4b6bda",backgroundColor:"rgba(37,99,235,0.04)"}}>
+                        + {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={()=>setProfileEdit(null)} className="btn-jelly flex-1 py-2.5 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">취소</button>
-              <button onClick={handleSaveProfile} disabled={profileSaving} className="btn-jelly flex-1 py-2.5 rounded-xl text-sm font-semibold text-white drop-btn disabled:opacity-50">{profileSaving?"저장 중...":"저장"}</button>
+
+              {/* AI 참고 메모 (구 성향) */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wide">AI 참고 메모</label>
+                <p className="text-xs text-gray-400 mb-2">역할, 특기, 관심사, 기여 가능한 일 등을 적어주세요. AI 킥오프 시 역할 배분에 참고합니다.</p>
+                <textarea
+                  className="input-drop w-full border border-blue-100 rounded-xl px-3 py-2.5 text-sm resize-none"
+                  placeholder={"예) 백엔드 개발이 특기이고 DB 설계 경험이 있습니다.\n팀 내 문서화와 일정 관리도 맡고 싶습니다."}
+                  rows={3}
+                  value={profileForm.personality}
+                  onChange={(e)=>setProfileForm({...profileForm,personality:e.target.value})}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button onClick={()=>setProfileEdit(null)} className="btn-jelly flex-1 py-2.5 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">취소</button>
+                <button onClick={handleSaveProfile} disabled={profileSaving} className="btn-jelly flex-1 py-2.5 rounded-xl text-sm font-semibold text-white drop-btn disabled:opacity-50">{profileSaving?"저장 중...":"저장"}</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── 헤더 배너 ── */}
       <header className="relative z-10 px-6 pt-5 pb-6 overflow-hidden"
@@ -425,7 +489,7 @@ export default function ProjectDashboard() {
                 const avatarGrad = AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length];
                 return (
                   <button key={m.id}
-                    onClick={() => isMe ? openProfileEdit(m) : setViewMember(m)}
+                    onClick={() => (isMe || isOwner || isAdmin) ? openProfileEdit(m) : setViewMember(m)}
                     className="btn-jelly flex items-center gap-2 px-3 py-2 rounded-xl transition-all"
                     style={{
                       backgroundColor: isMe ? "rgba(37,99,235,0.06)" : "rgba(248,250,255,0.9)",
@@ -440,8 +504,9 @@ export default function ProjectDashboard() {
                         <p className="text-xs font-semibold text-gray-800 leading-tight">{m.name}</p>
                         {isMe && <span className="text-xs font-bold" style={{color:ACCENT}}>나</span>}
                         {m.is_admin && <span className="text-xs font-semibold text-purple-500">·관리자</span>}
+                        {(isOwner || isAdmin) && !isMe && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>}
                       </div>
-                      {m.role && <p className="text-xs text-gray-400 leading-tight max-w-[90px] truncate">{m.role}</p>}
+                      <p className="text-xs text-gray-400 leading-tight max-w-[90px] truncate">{m.role || (kickoffDone ? "역할 미배정" : "")}</p>
                     </div>
                   </button>
                 );

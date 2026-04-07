@@ -5,7 +5,7 @@ export async function PATCH(request, { params }) {
     const { id } = await params;
     const body = await request.json();
 
-    const allowed = ["name", "skills", "personality"];
+    const allowed = ["name", "skills", "personality", "role"];
     const updates = Object.fromEntries(
       Object.entries(body).filter(([k]) => allowed.includes(k))
     );
