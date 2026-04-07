@@ -46,24 +46,14 @@ export default function Landing() {
         background: "linear-gradient(160deg, #0f172a 0%, #0c1e3c 40%, #0f2a52 70%, #0a1628 100%)",
       }}
     >
-      {/* 빗소리 배경 캔버스 */}
+      {/* 일렁이는 파도 배경 */}
       <RainBackground />
 
-      {/* 배경 글로우 */}
+      {/* 중앙 글로우 */}
       <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 2 }}>
         <div
-          className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full opacity-10"
-          style={{ background: "radial-gradient(ellipse, #3b82f6 0%, transparent 70%)", filter: "blur(60px)" }}
-        />
-      </div>
-
-      {/* 바닥 웅덩이 반사 */}
-      <div className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none" style={{ zIndex: 2 }}>
-        <div
-          className="w-full h-full"
-          style={{
-            background: "linear-gradient(to top, rgba(59,130,246,0.08) 0%, transparent 100%)",
-          }}
+          className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full opacity-15"
+          style={{ background: "radial-gradient(ellipse, #3b82f6 0%, transparent 70%)", filter: "blur(80px)" }}
         />
       </div>
 
