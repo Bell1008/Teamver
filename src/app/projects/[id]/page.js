@@ -11,6 +11,7 @@ import FilesSection from "@/components/FilesSection";
 import Spinner from "@/components/Spinner";
 import AggregateReport from "@/components/AggregateReport";
 import AIArchive from "@/components/AIArchive";
+import MilestonesSection from "@/components/MilestonesSection";
 
 const DEFAULT_SKILLS = ["React","Vue","Next.js","Node.js","Python","Java","Spring","DB 설계","UI/UX 디자인","기획/PM","데이터 분석","문서화","Flutter","Swift","Kotlin","TypeScript","Go","C++","DevOps","Figma"];
 const UNIT_OPTIONS = [
@@ -459,7 +460,7 @@ export default function ProjectDashboard() {
               {kickoffLoading
                 ? <span className="flex items-center justify-center gap-2"><Spinner size={16} color="white" />AI 역할 설계 중... (10~20초)</span>
                 : kickoffDone
-                  ? `재킥오프 실행 (${humanMembers.length}명) — 역할·마일스톤 재설계`
+                  ? `킥오프 재실행 (${humanMembers.length}명) — 역할·마일스톤 재설계`
                   : `AI 킥오프 실행 (${humanMembers.length}명) — 기획안 참고`}
             </button>
 
@@ -662,26 +663,14 @@ export default function ProjectDashboard() {
           <TasksSection projectId={id} members={humanMembers} myMemberId={myMemberId} isOwner={isOwner||isAdmin} />
         )}
 
-        {/* 마일스톤 */}
-        {kickoffDone && currentMilestone && (
-          <section className="rounded-2xl p-5"
-            style={{background:"white",border:"1px solid rgba(37,99,235,0.1)",boxShadow:"0 4px 24px rgba(37,99,235,0.08), 0 1px 4px rgba(37,99,235,0.04)"}}>
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-4 rounded-full" style={{background:`linear-gradient(180deg, ${ACCENT}, #1d4ed8)`}}/>
-                <h2 className="font-semibold text-gray-800">{currentMilestone.week}주차 마일스톤</h2>
-              </div>
-              <span className="text-xs px-2.5 py-1 rounded-full text-white font-semibold" style={{background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`,boxShadow:`0 2px 8px rgba(37,99,235,0.3)`}}>{currentMilestone.title}</span>
-            </div>
-            <ul className="space-y-2">
-              {(currentMilestone.tasks??[]).map((task,i)=>(
-                <li key={i} className="flex items-start gap-2.5 text-sm text-gray-600 py-1">
-                  <div className="mt-0.5 w-4 h-4 rounded-md border-2 flex-shrink-0" style={{borderColor:"rgba(37,99,235,0.2)",backgroundColor:"rgba(37,99,235,0.03)"}}/>
-                  <span className="leading-relaxed">{task}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
+        {/* 로드맵 (마일스톤) */}
+        {kickoffDone && milestones.length > 0 && (
+          <MilestonesSection
+            projectId={id}
+            milestones={milestones}
+            currentWeek={currentWeek}
+            canEdit={isOwner || isAdmin}
+          />
         )}
 
         {/* 파일 자료실 */}
