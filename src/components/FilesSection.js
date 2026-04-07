@@ -155,7 +155,13 @@ export default function FilesSection({ projectId, memberId, memberName }) {
     if (Array.isArray(data)) setFiles(data);
   }, [projectId]);
 
-  useEffect(() => { fetchFiles(); }, [fetchFiles]);
+  useEffect(() => {
+    fetchFiles();
+    const ch = supabase.channel(`files-${projectId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_files", filter: `project_id=eq.${projectId}` }, fetchFiles)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [projectId, fetchFiles]);
 
   const handleUpload = async (e) => {
     const fileList = Array.from(e.target.files ?? []);

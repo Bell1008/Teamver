@@ -21,7 +21,7 @@ const SendIcon = () => (
   </svg>
 );
 
-export default function ChatPanel({ projectId, myMemberId, myName, accentColor, isOpen, onClose }) {
+export default function ChatPanel({ projectId, myMemberId, myName, accentColor, isOpen, onClose, canUseAI }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -136,26 +136,31 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
 
           {/* AI 버튼 행 */}
           <div className="flex gap-2">
-            <button
-              onClick={() => handleAI("summary")}
-              disabled={!!aiLoading}
-              className="btn-jelly flex-1 py-2 rounded-xl text-xs font-semibold text-white whitespace-nowrap disabled:opacity-50 transition-all"
-              style={{ backgroundColor: "rgba(255,255,255,0.18)", backdropFilter: "blur(4px)" }}
-              onMouseEnter={e => { if (!aiLoading) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.28)"; }}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.18)"}
-            >
-              {aiLoading === "summary" ? "분석 중..." : "AI 요약"}
-            </button>
-            <button
-              onClick={() => handleAI("minutes")}
-              disabled={!!aiLoading}
-              className="btn-jelly flex-1 py-2 rounded-xl text-xs font-semibold text-white whitespace-nowrap disabled:opacity-50 transition-all"
-              style={{ backgroundColor: "rgba(255,255,255,0.18)", backdropFilter: "blur(4px)" }}
-              onMouseEnter={e => { if (!aiLoading) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.28)"; }}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.18)"}
-            >
-              {aiLoading === "minutes" ? "작성 중..." : "회의록"}
-            </button>
+            {[
+              { mode: "summary", label: "AI 요약",  loadingLabel: "분석 중..." },
+              { mode: "minutes", label: "회의록",   loadingLabel: "작성 중..." },
+            ].map(({ mode, label, loadingLabel }) => (
+              <button
+                key={mode}
+                onClick={() => canUseAI ? handleAI(mode) : null}
+                disabled={!!aiLoading}
+                title={canUseAI ? undefined : "관리자 권한이 필요합니다"}
+                className="btn-jelly flex-1 py-2 rounded-xl text-xs font-semibold text-white whitespace-nowrap disabled:opacity-60 transition-all relative"
+                style={{ backgroundColor: canUseAI ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)", backdropFilter: "blur(4px)", cursor: canUseAI ? "pointer" : "not-allowed" }}
+                onMouseEnter={e => { if (canUseAI && !aiLoading) e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.28)"; }}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = canUseAI ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)"}
+              >
+                <span className={canUseAI ? "" : "opacity-50"}>
+                  {aiLoading === mode ? loadingLabel : label}
+                </span>
+                {!canUseAI && (
+                  <svg className="inline-block ml-1 opacity-60" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                )}
+              </button>
+            ))}
           </div>
         </div>
 
