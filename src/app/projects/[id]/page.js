@@ -8,6 +8,8 @@ import ChatPanel from "@/components/ChatPanel";
 import TasksSection from "@/components/TasksSection";
 import PlanningDocs from "@/components/PlanningDocs";
 import FilesSection from "@/components/FilesSection";
+import Spinner from "@/components/Spinner";
+import AggregateReport from "@/components/AggregateReport";
 
 const DEFAULT_SKILLS = ["React","Vue","Next.js","Node.js","Python","Java","Spring","DB 설계","UI/UX 디자인","기획/PM","데이터 분석","문서화","Flutter","Swift","Kotlin","TypeScript","Go","C++","DevOps","Figma"];
 const UNIT_OPTIONS = [
@@ -30,8 +32,10 @@ export default function ProjectDashboard() {
   const [myMemberId, setMyMemberId] = useState(null);
   const [myMember, setMyMember]     = useState(null);
   const [copied, setCopied]         = useState(false);
-  const [kickoffLoading, setKickoffLoading] = useState(false);
-  const [kickoffDone, setKickoffDone]       = useState(false);
+  const [kickoffLoading, setKickoffLoading]     = useState(false);
+  const [kickoffDone, setKickoffDone]           = useState(false);
+  const [aggregateLoading, setAggregateLoading] = useState(false);
+  const [aggregateResult, setAggregateResult]   = useState(null);
   const [chatOpen, setChatOpen]     = useState(false);
   const [toast, setToast]           = useState(null);
 
@@ -121,6 +125,17 @@ export default function ProjectDashboard() {
     finally { setKickoffLoading(false); }
   };
 
+  const handleAggregate = async () => {
+    setAggregateLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${id}/aggregate`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "분석 실패");
+      setAggregateResult(json);
+    } catch (e) { alert("집계 실패: " + e.message); }
+    finally { setAggregateLoading(false); }
+  };
+
   const openEdit = () => {
     const p = data.project;
     setEditForm({ title: p.title, goal: p.goal, subject: p.subject, duration_unit: p.duration_unit ?? null, duration_value: p.duration_value ?? 4 });
@@ -181,7 +196,14 @@ export default function ProjectDashboard() {
     finally { setProfileSaving(false); }
   };
 
-  if (loading) return <main className="page-water flex items-center justify-center"><p className="text-gray-400">불러오는 중...</p></main>;
+  if (loading) return (
+    <main className="page-water flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center gap-3">
+        <Spinner size={32} />
+        <p className="text-sm text-gray-400">불러오는 중...</p>
+      </div>
+    </main>
+  );
   if (error)   return <main className="page-water flex items-center justify-center"><p className="text-red-500">{error}</p></main>;
 
   const { project, members, milestones } = data;
@@ -429,12 +451,29 @@ export default function ProjectDashboard() {
             {!kickoffDone ? (
               <button onClick={handleKickoff} disabled={kickoffLoading||humanMembers.length===0}
                 className="btn-jelly drop-btn w-full py-3 rounded-xl text-sm font-semibold disabled:opacity-50">
-                {kickoffLoading?"AI 역할 설계 중... (10~20초)":`AI 킥오프 실행 (${humanMembers.length}명) — 기획안 참고`}
+                {kickoffLoading ? <span className="flex items-center justify-center gap-2"><Spinner size={16} color="white" />AI 역할 설계 중... (10~20초)</span> : `AI 킥오프 실행 (${humanMembers.length}명) — 기획안 참고`}
               </button>
             ) : (
-              <div className="flex items-center gap-2 justify-center py-1.5 rounded-xl" style={{backgroundColor:"rgba(74,222,128,0.08)",border:"1px solid rgba(74,222,128,0.2)"}}>
-                <div className="w-2 h-2 rounded-full bg-green-400"/>
-                <p className="text-sm text-green-600 font-medium">킥오프 완료 — 역할 및 마일스톤이 설계되었습니다.</p>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2 justify-center py-1.5 rounded-xl" style={{backgroundColor:"rgba(74,222,128,0.08)",border:"1px solid rgba(74,222,128,0.2)"}}>
+                  <div className="w-2 h-2 rounded-full bg-green-400"/>
+                  <p className="text-sm text-green-600 font-medium">킥오프 완료</p>
+                </div>
+                <button
+                  onClick={handleAggregate}
+                  disabled={aggregateLoading}
+                  className="btn-jelly flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold shrink-0 disabled:opacity-50"
+                  style={{ background:`linear-gradient(135deg, #7c3aed, #6d28d9)`, color:"white", boxShadow:"0 3px 12px rgba(124,58,237,0.35)" }}>
+                  {aggregateLoading
+                    ? <><Spinner size={13} color="white" /><span>분석 중...</span></>
+                    : <>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+                        </svg>
+                        집계 에이전트
+                      </>
+                  }
+                </button>
               </div>
             )}
           </section>
@@ -636,6 +675,9 @@ export default function ProjectDashboard() {
 
         <div className="h-4"/>
       </div>
+
+      {/* 집계 에이전트 리포트 모달 */}
+      <AggregateReport report={aggregateResult} onClose={() => setAggregateResult(null)} />
 
       <style>{`
         @keyframes fadeInDown {

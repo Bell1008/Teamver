@@ -143,7 +143,7 @@ export default function PlanningDocs({ projectId, memberId, memberName, canUploa
                   {[doc.description, formatSize(doc.size), doc.member_name].filter(Boolean).join(" · ")}
                 </p>
               </div>
-              <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 shrink-0">
                 <a href={doc.url} download={doc.name} target="_blank" rel="noreferrer"
                   className="btn-jelly w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
                   style={{ backgroundColor: "rgba(37,99,235,0.08)", color: ACCENT }} title="다운로드">

@@ -112,13 +112,13 @@ function FileRow({ file, canDelete, onDelete }) {
       )}
 
       {/* 다운로드 + 삭제 */}
-      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 shrink-0 transition-opacity">
         <a
           href={file.url}
           download={file.name}
           target="_blank"
           rel="noreferrer"
-          className="btn-jelly w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+          className="btn-jelly w-7 h-7 flex items-center justify-center rounded-lg transition-all"
           style={{ backgroundColor: "rgba(37,99,235,0.08)", color: ACCENT }}
           title="다운로드"
         >
