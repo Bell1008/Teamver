@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getSession, getProfile, signOut } from "@/lib/auth";
 import ProjectsTab from "@/components/tabs/ProjectsTab";
 import MessagesTab from "@/components/tabs/MessagesTab";
@@ -25,12 +25,14 @@ const TABS = [
   { id: "settings",      label: "설정",      icon: Icons.settings },
 ];
 
-export default function HomePage() {
+function HomePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("projects");
   const [userId, setUserId] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [dmTarget, setDmTarget] = useState(null); // { partnerId, partnerName }
 
   useEffect(() => {
     getSession().then(async (session) => {
@@ -41,6 +43,15 @@ export default function HomePage() {
       setLoading(false);
     });
   }, [router]);
+
+  // URL 파라미터로 DM 바로 열기: ?tab=messages&dm=<userId>&name=<name>
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    const dm  = searchParams.get("dm");
+    const name = searchParams.get("name");
+    if (tab) setActiveTab(tab);
+    if (dm)  setDmTarget({ partnerId: dm, partnerName: name ?? "팀원" });
+  }, [searchParams]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center page-water">
@@ -108,10 +119,18 @@ export default function HomePage() {
       {/* 메인 */}
       <main className="flex-1 overflow-hidden">
         {activeTab === "projects"      && <ProjectsTab userId={userId} accentColor={ACCENT} />}
-        {activeTab === "messages"      && <MessagesTab />}
+        {activeTab === "messages"      && <MessagesTab userId={userId} initialPartnerId={dmTarget?.partnerId} initialPartnerName={dmTarget?.partnerName} />}
         {activeTab === "notifications" && <NotificationsTab />}
         {activeTab === "settings"      && <SettingsTab profile={profile} />}
       </main>
     </div>
+  );
+}
+
+export default function HomePageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center page-water"><div className="w-7 h-7 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin"/></div>}>
+      <HomePage />
+    </Suspense>
   );
 }

@@ -3,11 +3,12 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import Spinner from "@/components/Spinner";
+import { useDialog } from "@/components/DialogProvider";
 
 const ACCENT = "#2563eb";
 
 // ── 개별 마일스톤 카드 ──────────────────────────────────────
-function MilestoneCard({ ms, currentWeek, canEdit, onUpdated, onDeleted }) {
+function MilestoneCard({ ms, currentWeek, canEdit, onUpdated, onDeleted, dialog }) {
   const [open, setOpen]         = useState(ms.week === currentWeek);
   const [editing, setEditing]   = useState(false);
   const [saving, setSaving]     = useState(false);
@@ -57,7 +58,7 @@ function MilestoneCard({ ms, currentWeek, canEdit, onUpdated, onDeleted }) {
   };
 
   const handleDelete = async () => {
-    if (!confirm(`"${ms.title}" 마일스톤을 삭제하시겠습니까?`)) return;
+    if (!await dialog.confirm(`"${ms.title}" 마일스톤을 삭제하시겠습니까?`, { title: "마일스톤 삭제", confirmText: "삭제", danger: true })) return;
     await fetch(`/api/milestones/${ms.id}`, { method: "DELETE" });
     onDeleted(ms.id);
   };
@@ -235,6 +236,7 @@ function MilestoneCard({ ms, currentWeek, canEdit, onUpdated, onDeleted }) {
 
 // ── 섹션 전체 ──────────────────────────────────────────────
 export default function MilestonesSection({ projectId, milestones: initialMilestones, currentWeek, canEdit }) {
+  const dialog = useDialog();
   const [milestones, setMilestones] = useState(initialMilestones ?? []);
   const [collapsed, setCollapsed]   = useState(false);
   const [nextLoading, setNextLoading] = useState(false);
@@ -261,7 +263,7 @@ export default function MilestonesSection({ projectId, milestones: initialMilest
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "마일스톤 생성 실패");
       setMilestones((prev) => [...prev, data]);
-    } catch (e) { alert(e.message); }
+    } catch (e) { await dialog.alert(e.message); }
     finally { setNextLoading(false); }
   };
 
@@ -319,6 +321,7 @@ export default function MilestonesSection({ projectId, milestones: initialMilest
                   canEdit={canEdit}
                   onUpdated={handleUpdated}
                   onDeleted={handleDeleted}
+                  dialog={dialog}
                 />
               ))
             )}

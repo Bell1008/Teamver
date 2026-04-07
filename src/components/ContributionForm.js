@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useDialog } from "@/components/DialogProvider";
 
 export default function ContributionForm({ projectId, members, myMemberId, accentColor = "#2563eb", onSubmit }) {
+  const dialog = useDialog();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -30,7 +32,7 @@ export default function ContributionForm({ projectId, members, myMemberId, accen
       onSubmit?.();
       setTimeout(() => { setSuccess(false); setOpen(false); }, 1500);
     } catch {
-      alert("입력 중 오류가 발생했습니다.");
+      await dialog.alert("입력 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }

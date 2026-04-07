@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { useDialog } from "@/components/DialogProvider";
 
 const ACCENT = "#2563eb";
 
@@ -144,6 +145,7 @@ function FileRow({ file, canDelete, onDelete }) {
 }
 
 export default function FilesSection({ projectId, memberId, memberName }) {
+  const dialog = useDialog();
   const [files, setFiles]         = useState([]);
   const [uploading, setUploading] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
@@ -170,7 +172,7 @@ export default function FilesSection({ projectId, memberId, memberName }) {
 
     for (const file of fileList) {
       if (file.size > 20 * 1024 * 1024) {
-        alert(`${file.name}: 파일 크기는 20MB 이하여야 합니다.`);
+        await dialog.alert(`${file.name}: 파일 크기는 20MB 이하여야 합니다.`, { type: "warning" });
         continue;
       }
 
@@ -200,7 +202,7 @@ export default function FilesSection({ projectId, memberId, memberName }) {
         if (res.status === 402) { setPremiumMsg(data.error); setShowPremium(true); break; }
         if (!res.ok) throw new Error(data.error ?? "업로드 실패");
       } catch (err) {
-        alert(`${file.name} 업로드 실패: ${err.message}`);
+        await dialog.alert(`${file.name} 업로드 실패: ${err.message}`);
       } finally {
         setUploading(false);
       }
@@ -209,7 +211,7 @@ export default function FilesSection({ projectId, memberId, memberName }) {
   };
 
   const handleDelete = async (fileId) => {
-    if (!confirm("이 파일을 삭제하시겠습니까?")) return;
+    if (!await dialog.confirm("이 파일을 삭제하시겠습니까?", { title: "파일 삭제", confirmText: "삭제", danger: true })) return;
     await fetch(`/api/files/${fileId}`, { method: "DELETE" });
     fetchFiles();
   };

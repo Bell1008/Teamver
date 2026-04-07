@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { useDialog } from "@/components/DialogProvider";
 
 const ChatIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -22,6 +23,7 @@ const SendIcon = () => (
 );
 
 export default function ChatPanel({ projectId, myMemberId, myName, accentColor, isOpen, onClose, canUseAI }) {
+  const dialog = useDialog();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -85,7 +87,7 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
         body: JSON.stringify({ mode }),
       });
       const data = await res.json();
-      if (data.error) alert(data.error);
+      if (data.error) await dialog.alert(data.error);
     } finally {
       setAiLoading(null);
     }

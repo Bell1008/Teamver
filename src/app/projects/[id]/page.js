@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useDialog } from "@/components/DialogProvider";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getSession, getProfile } from "@/lib/auth";
@@ -26,6 +27,7 @@ export default function ProjectDashboard() {
   const router = useRouter();
   const prevMemberCount = useRef(0);
 
+  const dialog = useDialog();
   const [data, setData]             = useState(null);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState("");
@@ -124,7 +126,7 @@ export default function ProjectDashboard() {
       await fetchData();
       setKickoffDone(true);
       showToast("AI 킥오프가 완료되었습니다");
-    } catch (e) { alert("킥오프 실패: " + e.message); }
+    } catch (e) { await dialog.alert("킥오프 실패: " + e.message); }
     finally { setKickoffLoading(false); }
   };
 
@@ -135,7 +137,7 @@ export default function ProjectDashboard() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "분석 실패");
       setAggregateResult(json);
-    } catch (e) { alert("집계 실패: " + e.message); }
+    } catch (e) { await dialog.alert("집계 실패: " + e.message); }
     finally { setAggregateLoading(false); }
   };
 
@@ -153,18 +155,21 @@ export default function ProjectDashboard() {
       const res = await fetch(`/api/projects/${id}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ title:editForm.title,goal:editForm.goal,subject:editForm.subject,duration_unit:du,duration_value:du?dv:null,duration_weeks:dw }) });
       if (!res.ok) throw new Error("저장 실패");
       await fetchData(); setEditing(false); showToast("저장되었습니다");
-    } catch (e) { alert(e.message); }
+    } catch (e) { await dialog.alert(e.message); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
-    if (!confirm("프로젝트를 삭제하면 모든 데이터가 사라집니다. 정말 삭제하시겠습니까?")) return;
+    if (!await dialog.confirm(
+      "프로젝트를 삭제하면 모든 데이터가 사라집니다.\n정말 삭제하시겠습니까?",
+      { title: "프로젝트 삭제", confirmText: "삭제", danger: true }
+    )) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("삭제 실패");
       router.replace("/home");
-    } catch (e) { alert(e.message); setDeleting(false); }
+    } catch (e) { await dialog.alert(e.message); setDeleting(false); }
   };
 
   const handleToggleAdmin = async (member) => {
@@ -195,7 +200,7 @@ export default function ProjectDashboard() {
       // 내 이름 변경 시 로컬 캐시 갱신
       if (profileEdit.id === myMemberId && profileForm.name !== profileEdit.name) localStorage.setItem(`member_name_${id}`, profileForm.name);
       await fetchData(); setProfileEdit(null); showToast("프로필이 업데이트되었습니다");
-    } catch (e) { alert(e.message); }
+    } catch (e) { await dialog.alert(e.message); }
     finally { setProfileSaving(false); }
   };
 
@@ -452,8 +457,11 @@ export default function ProjectDashboard() {
               <button onClick={()=>handleCopy(inviteUrl)} className="btn-jelly drop-btn px-4 py-3 rounded-xl text-sm shrink-0">{copied?"복사됨!":"링크 복사"}</button>
             </div>
             {/* 킥오프 버튼 — 1차/재킥오프 항상 표시 */}
-            <button onClick={() => {
-              if (kickoffDone && !confirm("재킥오프 시 역할·마일스톤이 재설계됩니다. 실행하시겠습니까?")) return;
+            <button onClick={async () => {
+              if (kickoffDone && !await dialog.confirm(
+                "킥오프를 재실행하면 역할·마일스톤이 재설계됩니다.\n기존 마일스톤은 삭제됩니다.",
+                { title: "킥오프 재실행", confirmText: "재실행", cancelText: "취소" }
+              )) return;
               handleKickoff();
             }} disabled={kickoffLoading||humanMembers.length===0}
               className="btn-jelly drop-btn w-full py-3 rounded-xl text-sm font-semibold disabled:opacity-50">
@@ -633,7 +641,11 @@ export default function ProjectDashboard() {
                   {/* 액션 버튼 */}
                   <div className="flex gap-2 pt-1">
                     <button
-                      onClick={() => { showToast("개인 메시지 기능은 준비 중입니다."); setViewMember(null); }}
+                      onClick={() => {
+                        if (!vm.user_id) { showToast("이 멤버는 아직 로그인하지 않았습니다."); return; }
+                        setViewMember(null);
+                        router.push(`/home?tab=messages&dm=${vm.user_id}&name=${encodeURIComponent(vm.name)}`);
+                      }}
                       className="btn-jelly flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white"
                       style={{background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`,boxShadow:`0 3px 12px rgba(37,99,235,0.3)`}}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

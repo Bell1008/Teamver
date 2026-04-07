@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { useDialog } from "@/components/DialogProvider";
 
 const ACCENT = "#2563eb";
 const MAX_FREE_PLANNING = 3;
@@ -41,6 +42,7 @@ function formatSize(bytes) {
 }
 
 export default function PlanningDocs({ projectId, memberId, memberName, canUpload }) {
+  const dialog = useDialog();
   const [docs, setDocs] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [desc, setDesc] = useState("");
@@ -67,7 +69,7 @@ export default function PlanningDocs({ projectId, memberId, memberName, canUploa
     e.target.value = "";
 
     if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-      alert(`파일 크기는 ${MAX_SIZE_MB}MB 이하여야 합니다.`);
+      await dialog.alert(`파일 크기는 ${MAX_SIZE_MB}MB 이하여야 합니다.`, { type: "warning" });
       return;
     }
 
@@ -94,14 +96,14 @@ export default function PlanningDocs({ projectId, memberId, memberName, canUploa
       setDesc("");
       fetchDocs();
     } catch (err) {
-      alert("업로드 실패: " + err.message);
+      await dialog.alert("업로드 실패: " + err.message);
     } finally {
       setUploading(false);
     }
   };
 
   const handleDelete = async (docId) => {
-    if (!confirm("이 기획안을 삭제하시겠습니까?")) return;
+    if (!await dialog.confirm("이 기획안을 삭제하시겠습니까?", { title: "기획안 삭제", confirmText: "삭제", danger: true })) return;
     await fetch(`/api/files/${docId}`, { method: "DELETE" });
     fetchDocs();
   };

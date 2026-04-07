@@ -1,14 +1,44 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useDialog } from "@/components/DialogProvider";
 
 const ACCENT = "#2563eb";
 
+// ── 타입별 아이콘 (SVG) ───────────────────────────────────
+const TypeIcons = {
+  kickoff: (color) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+    </svg>
+  ),
+  aggregate: (color) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round">
+      <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+      <line x1="2" y1="20" x2="22" y2="20"/>
+    </svg>
+  ),
+  summary: (color) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+    </svg>
+  ),
+  minutes: (color) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      <polyline points="10 9 9 9 8 9"/>
+    </svg>
+  ),
+};
+
 const TYPE_CONFIG = {
-  kickoff:   { label: "킥오프",     color: "#7c3aed", bg: "rgba(124,58,237,0.1)",  border: "rgba(124,58,237,0.25)", icon: "⚡" },
-  aggregate: { label: "집계 리포트", color: "#0891b2", bg: "rgba(8,145,178,0.1)",   border: "rgba(8,145,178,0.25)",  icon: "📊" },
-  summary:   { label: "AI 요약",    color: ACCENT,    bg: "rgba(37,99,235,0.1)",   border: "rgba(37,99,235,0.25)",  icon: "🤖" },
-  minutes:   { label: "회의록",     color: "#059669", bg: "rgba(5,150,105,0.1)",   border: "rgba(5,150,105,0.25)",  icon: "📋" },
+  kickoff:   { label: "킥오프",     color: "#7c3aed", bg: "rgba(124,58,237,0.1)",  border: "rgba(124,58,237,0.25)" },
+  aggregate: { label: "집계 리포트", color: "#0891b2", bg: "rgba(8,145,178,0.1)",   border: "rgba(8,145,178,0.25)"  },
+  summary:   { label: "AI 요약",    color: ACCENT,    bg: "rgba(37,99,235,0.1)",   border: "rgba(37,99,235,0.25)"  },
+  minutes:   { label: "회의록",     color: "#059669", bg: "rgba(5,150,105,0.1)",   border: "rgba(5,150,105,0.25)"  },
 };
 
 const HEALTH_COLOR = { good: "#16a34a", warning: "#b45309", critical: "#dc2626" };
@@ -154,8 +184,8 @@ function ArtifactCard({ artifact, onDelete }) {
         className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-gray-50/80"
         onClick={() => setExpanded((v) => !v)}
       >
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0" style={{ backgroundColor: tc.bg, border: `1px solid ${tc.border}` }}>
-          {tc.icon}
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: tc.bg, border: `1px solid ${tc.border}` }}>
+          {TypeIcons[artifact.type]?.(tc.color)}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-800 truncate">{artifact.title}</p>
@@ -203,6 +233,7 @@ const FILTER_OPTIONS = [
 ];
 
 export default function AIArchive({ projectId, isOpen, onClose }) {
+  const dialog = useDialog();
   const [artifacts, setArtifacts] = useState([]);
   const [loading, setLoading]     = useState(false);
   const [filter, setFilter]       = useState("all");
@@ -223,7 +254,7 @@ export default function AIArchive({ projectId, isOpen, onClose }) {
   }, [isOpen, fetchArtifacts]);
 
   const handleDelete = async (artifactId) => {
-    if (!confirm("이 항목을 삭제하시겠습니까?")) return;
+    if (!await dialog.confirm("이 항목을 삭제하시겠습니까?", { title: "항목 삭제", confirmText: "삭제", danger: true })) return;
     await fetch(`/api/projects/${projectId}/artifacts?artifactId=${artifactId}`, { method: "DELETE" });
     setArtifacts((prev) => prev.filter((a) => a.id !== artifactId));
   };
@@ -247,9 +278,11 @@ export default function AIArchive({ projectId, isOpen, onClose }) {
           </div>
           <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center"
                 style={{ backgroundColor: "rgba(255,255,255,0.12)", backdropFilter: "blur(4px)" }}>
-                🗂️
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.8" strokeLinecap="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
               </div>
               <div>
                 <h2 className="text-white font-bold text-sm">AI 작업물 보관함</h2>
@@ -292,7 +325,12 @@ export default function AIArchive({ projectId, isOpen, onClose }) {
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-14 gap-3 text-center">
-              <div className="text-4xl">🗃️</div>
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "rgba(37,99,235,0.07)" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                  <line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
+                </svg>
+              </div>
               <p className="text-sm font-semibold text-gray-500">저장된 AI 작업물이 없습니다</p>
               <p className="text-xs text-gray-400 leading-relaxed">
                 킥오프, 집계 에이전트, AI 요약/회의록을<br />실행하면 자동으로 여기 저장됩니다.
