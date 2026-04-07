@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useDialog } from "@/components/DialogProvider";
 
 const ACCENT = "#2563eb";
 
@@ -203,6 +204,7 @@ const FILTER_OPTIONS = [
 ];
 
 export default function AIArchive({ projectId, isOpen, onClose }) {
+  const dialog = useDialog();
   const [artifacts, setArtifacts] = useState([]);
   const [loading, setLoading]     = useState(false);
   const [filter, setFilter]       = useState("all");
@@ -223,7 +225,7 @@ export default function AIArchive({ projectId, isOpen, onClose }) {
   }, [isOpen, fetchArtifacts]);
 
   const handleDelete = async (artifactId) => {
-    if (!confirm("이 항목을 삭제하시겠습니까?")) return;
+    if (!await dialog.confirm("이 항목을 삭제하시겠습니까?", { title: "항목 삭제", confirmText: "삭제", danger: true })) return;
     await fetch(`/api/projects/${projectId}/artifacts?artifactId=${artifactId}`, { method: "DELETE" });
     setArtifacts((prev) => prev.filter((a) => a.id !== artifactId));
   };
