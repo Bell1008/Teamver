@@ -81,13 +81,17 @@ export default function PlanningDocs({ projectId, memberId, memberName, canUploa
   };
 
   return (
-    <section className="bg-white rounded-2xl p-5" style={{ border: "1px solid rgba(37,99,235,0.08)", boxShadow: "0 2px 16px rgba(37,99,235,0.04)" }}>
+    <section className="rounded-2xl p-5"
+      style={{ background:"white", border: "1px solid rgba(37,99,235,0.1)", boxShadow: "0 4px 24px rgba(37,99,235,0.08), 0 1px 4px rgba(37,99,235,0.04)" }}>
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="font-semibold text-gray-800">기획안 저장소</h2>
-          <p className="text-xs text-gray-400 mt-0.5">AI 킥오프 시 자동으로 참고합니다 · 무료 {MAX_FREE_PLANNING}개</p>
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-4 rounded-full" style={{ background: `linear-gradient(180deg, ${ACCENT}, #1d4ed8)` }}/>
+          <div>
+            <h2 className="font-semibold text-gray-800">기획안 저장소</h2>
+            <p className="text-xs text-gray-400 mt-0.5">AI 킥오프 시 자동으로 참고합니다 · 무료 {MAX_FREE_PLANNING}개</p>
+          </div>
         </div>
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: "rgba(37,99,235,0.08)", color: ACCENT }}>{docs.length}/{MAX_FREE_PLANNING}</span>
+        <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{ backgroundColor: "rgba(37,99,235,0.08)", color: ACCENT }}>{docs.length}/{MAX_FREE_PLANNING}</span>
       </div>
 
       {/* 문서 목록 */}
