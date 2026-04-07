@@ -108,12 +108,19 @@ function PartnerProfileModal({ partnerId, myUserId, onClose }) {
 }
 
 /* ── 대화 목록 아이템 ───────────────────────────────────── */
+// 팀플 이름 목록 포맷 — 중복 제거 후 콤마 연결
+function formatMemberNames(names) {
+  const unique = [...new Set((names ?? []).filter(Boolean))];
+  if (!unique.length) return "";
+  return unique.join(", ");
+}
+
 function ThreadItem({ t, active, onSelect, onClose, myUserId }) {
   const lastText = t.lastMessage.file_name
-    ? `📎 ${t.lastMessage.file_name}`
+    ? `파일: ${t.lastMessage.file_name}`
     : t.lastMessage.content;
   const displayName = t.username;
-  const teamName = t.memberNames?.[0];
+  const teamNames = formatMemberNames(t.memberNames);
 
   return (
     <div
@@ -133,7 +140,7 @@ function ThreadItem({ t, active, onSelect, onClose, myUserId }) {
         <div className="flex items-center justify-between mb-0.5">
           <div className="min-w-0">
             <span className="text-sm font-semibold text-gray-800 truncate">{displayName}</span>
-            {teamName && <span className="ml-1.5 text-xs text-gray-400">({teamName})</span>}
+            {teamNames && <span className="ml-1.5 text-xs text-gray-400">({teamNames})</span>}
           </div>
           <span className="text-xs text-gray-400 shrink-0 ml-2">{timeAgo(t.lastMessage.created_at)}</span>
         </div>
@@ -314,8 +321,8 @@ function MessageView({ thread, myUserId, onBack }) {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold text-gray-800 leading-tight">{thread.username}</p>
-            {thread.memberNames?.[0] && (
-              <p className="text-xs text-gray-400">{thread.memberNames[0]}</p>
+            {formatMemberNames(thread.memberNames) && (
+              <p className="text-xs text-gray-400">{formatMemberNames(thread.memberNames)}</p>
             )}
           </div>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" className="shrink-0">
