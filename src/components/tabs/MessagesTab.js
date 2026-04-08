@@ -392,12 +392,300 @@ function MessageView({ thread, myUserId, onBack }) {
   );
 }
 
+/* ── 친구 목록 아이템 ─────────────────────────────────── */
+function FriendItem({ friend, onStartDm }) {
+  const displayName = formatMemberNames(friend.memberNames) || friend.username;
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+        style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow:"0 2px 8px rgba(37,99,235,0.25)" }}>
+        {displayName[0]?.toUpperCase() ?? "?"}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
+        {formatMemberNames(friend.memberNames) && friend.username && formatMemberNames(friend.memberNames) !== friend.username && (
+          <p className="text-xs text-gray-400 truncate">{friend.username}</p>
+        )}
+      </div>
+      <button onClick={() => onStartDm(friend)}
+        className="btn-jelly shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold text-white"
+        style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)` }}>
+        메시지
+      </button>
+    </div>
+  );
+}
+
+/* ── 친구 요청 아이템 ─────────────────────────────────── */
+function RequestItem({ req, type, onAction }) {
+  const displayName = formatMemberNames(req.memberNames) || req.username;
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+        style={{ background:"linear-gradient(135deg, #64748b, #475569)" }}>
+        {displayName[0]?.toUpperCase() ?? "?"}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
+        <p className="text-xs text-gray-400">{type === "received" ? "친구 요청을 보냈습니다" : "요청 보냄"}</p>
+      </div>
+      {type === "received" ? (
+        <div className="flex gap-1.5 shrink-0">
+          <button onClick={() => onAction(req.id, "accept")}
+            className="btn-jelly px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white"
+            style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)` }}>수락</button>
+          <button onClick={() => onAction(req.id, "reject")}
+            className="btn-jelly px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200">거절</button>
+        </div>
+      ) : (
+        <button onClick={() => onAction(req.id, "cancel")}
+          className="btn-jelly shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200">취소</button>
+      )}
+    </div>
+  );
+}
+
+/* ── 검색 결과 아이템 ─────────────────────────────────── */
+function SearchResultItem({ user, onSendRequest, onAction }) {
+  const displayName = formatMemberNames(user.memberNames) || user.username;
+  let actionButton;
+  if (user.relation === "none") {
+    actionButton = (
+      <button onClick={() => onSendRequest(user.id)}
+        className="btn-jelly shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white"
+        style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)` }}>요청</button>
+    );
+  } else if (user.relation === "pending_sent") {
+    actionButton = (
+      <button onClick={() => onAction(user.requestId, "cancel")}
+        className="btn-jelly shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200">취소</button>
+    );
+  } else if (user.relation === "pending_received") {
+    actionButton = (
+      <div className="flex gap-1.5 shrink-0">
+        <button onClick={() => onAction(user.requestId, "accept")}
+          className="btn-jelly px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white"
+          style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)` }}>수락</button>
+        <button onClick={() => onAction(user.requestId, "reject")}
+          className="btn-jelly px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200">거절</button>
+      </div>
+    );
+  } else {
+    actionButton = <span className="shrink-0 text-xs font-semibold text-blue-500 px-1">친구</span>;
+  }
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+        style={{ background:"linear-gradient(135deg, #64748b, #475569)" }}>
+        {displayName[0]?.toUpperCase() ?? "?"}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
+        {user.memberNames?.length > 0 && <p className="text-xs text-gray-400 truncate">{user.username}</p>}
+      </div>
+      {actionButton}
+    </div>
+  );
+}
+
+/* ── 친구 패널 ────────────────────────────────────────── */
+function FriendsPanel({ userId, onStartDm }) {
+  const [subTab, setSubTab]               = useState("list");
+  const [friends, setFriends]             = useState([]);
+  const [requests, setRequests]           = useState({ received: [], sent: [] });
+  const [searchQ, setSearchQ]             = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching]         = useState(false);
+  const [loading, setLoading]             = useState(true);
+  const searchTimerRef                    = useRef(null);
+
+  const fetchFriends = useCallback(async () => {
+    const res = await fetch(`/api/friends?userId=${userId}`);
+    const data = await res.json();
+    if (Array.isArray(data)) setFriends(data);
+  }, [userId]);
+
+  const fetchRequests = useCallback(async () => {
+    const res = await fetch(`/api/friends/requests?userId=${userId}`);
+    const data = await res.json();
+    if (data.received !== undefined) setRequests(data);
+  }, [userId]);
+
+  useEffect(() => {
+    Promise.all([fetchFriends(), fetchRequests()]).finally(() => setLoading(false));
+  }, [fetchFriends, fetchRequests]);
+
+  // Realtime 구독
+  useEffect(() => {
+    if (!userId) return;
+    const ch = supabase.channel(`friends-panel-${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "friend_requests" }, () => {
+        fetchFriends(); fetchRequests();
+      }).subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [userId, fetchFriends, fetchRequests]);
+
+  // 디바운스 검색
+  useEffect(() => {
+    clearTimeout(searchTimerRef.current);
+    if (!searchQ.trim()) { setSearchResults([]); return; }
+    setSearching(true);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(searchQ)}&userId=${userId}`);
+        const data = await res.json();
+        if (Array.isArray(data)) setSearchResults(data);
+      } finally { setSearching(false); }
+    }, 300);
+    return () => clearTimeout(searchTimerRef.current);
+  }, [searchQ, userId]);
+
+  const sendRequest = async (recipientId) => {
+    const res = await fetch("/api/friends", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ senderId: userId, recipientId }),
+    });
+    if (res.ok) {
+      // 낙관적 업데이트
+      setSearchResults((prev) => prev.map((u) =>
+        u.id === recipientId ? { ...u, relation: "pending_sent" } : u
+      ));
+      fetchRequests();
+    }
+  };
+
+  const handleAction = async (requestId, action) => {
+    const res = await fetch(`/api/friends/requests/${requestId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    if (res.ok) {
+      await Promise.all([fetchFriends(), fetchRequests()]);
+      setSearchResults((prev) => prev.map((u) =>
+        u.requestId === requestId
+          ? { ...u, relation: action === "accept" ? "accepted" : "none", requestId: undefined }
+          : u
+      ));
+    }
+  };
+
+  const receivedCount = requests.received?.length ?? 0;
+
+  if (loading) return (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="w-6 h-6 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin"/>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col flex-1 overflow-hidden">
+      {/* 서브 탭 */}
+      <div className="shrink-0 flex border-b" style={{ borderColor:"rgba(37,99,235,0.08)" }}>
+        <button onClick={() => setSubTab("list")}
+          className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${subTab === "list" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-400 hover:text-gray-600"}`}>
+          친구목록{friends.length > 0 && <span className="opacity-60 ml-1">({friends.length})</span>}
+        </button>
+        <button onClick={() => setSubTab("requests")}
+          className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${subTab === "requests" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-400 hover:text-gray-600"}`}>
+          요청
+          {receivedCount > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 text-xs font-bold text-white rounded-full"
+              style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)` }}>{receivedCount}</span>
+          )}
+        </button>
+      </div>
+
+      {subTab === "list" ? (
+        <div className="flex-1 overflow-y-auto divide-y" style={{ borderColor:"rgba(37,99,235,0.06)" }}>
+          {friends.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              <p className="text-sm font-semibold text-gray-500">친구가 없습니다</p>
+              <p className="text-xs text-gray-400 leading-relaxed">요청 탭에서 유저를 검색해<br/>친구 요청을 보내보세요.</p>
+            </div>
+          ) : (
+            friends.map((f) => <FriendItem key={f.id} friend={f} onStartDm={onStartDm} />)
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col flex-1 overflow-hidden">
+          {/* 검색창 */}
+          <div className="shrink-0 px-3 py-2.5" style={{ borderBottom:"1px solid rgba(37,99,235,0.06)" }}>
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                className="w-full pl-8 pr-3 py-2 rounded-xl text-xs border outline-none"
+                style={{ borderColor:"rgba(37,99,235,0.15)", backgroundColor:"#f8faff" }}
+                placeholder="유저명으로 검색..."
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+              />
+              {searching && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border border-blue-200 border-t-blue-500 animate-spin"/>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto divide-y" style={{ borderColor:"rgba(37,99,235,0.06)" }}>
+            {searchQ.trim() ? (
+              searchResults.length === 0 && !searching ? (
+                <p className="text-xs text-gray-400 text-center py-8">검색 결과 없음</p>
+              ) : (
+                searchResults.map((u) => (
+                  <SearchResultItem key={u.id} user={u} onSendRequest={sendRequest} onAction={handleAction} />
+                ))
+              )
+            ) : (
+              <>
+                {receivedCount > 0 && (
+                  <>
+                    <div className="px-4 py-1.5 bg-gray-50">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">받은 요청</p>
+                    </div>
+                    {requests.received.map((r) => (
+                      <RequestItem key={r.id} req={r} type="received" onAction={handleAction} />
+                    ))}
+                  </>
+                )}
+                {(requests.sent?.length ?? 0) > 0 && (
+                  <>
+                    <div className="px-4 py-1.5 bg-gray-50">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">보낸 요청</p>
+                    </div>
+                    {requests.sent.map((r) => (
+                      <RequestItem key={r.id} req={r} type="sent" onAction={handleAction} />
+                    ))}
+                  </>
+                )}
+                {receivedCount === 0 && (requests.sent?.length ?? 0) === 0 && (
+                  <div className="flex flex-col items-center justify-center py-10 gap-2 text-center px-4">
+                    <p className="text-sm font-semibold text-gray-500">요청 없음</p>
+                    <p className="text-xs text-gray-400">위 검색창으로 유저를 찾아<br/>친구 요청을 보낼 수 있습니다.</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── 메인 탭 ────────────────────────────────────────────── */
 export default function MessagesTab({ userId, initialPartnerId, initialPartnerName, onUnreadChange }) {
-  const [threads, setThreads]     = useState([]);
-  const [hidden, setHidden]       = useState(new Set()); // 닫기로 숨긴 대화
-  const [loading, setLoading]     = useState(true);
-  const [selected, setSelected]   = useState(null);
+  const [mainTab, setMainTab]      = useState("messages"); // "messages" | "friends"
+  const [threads, setThreads]      = useState([]);
+  const [hidden, setHidden]        = useState(new Set()); // 닫기로 숨긴 대화
+  const [loading, setLoading]      = useState(true);
+  const [selected, setSelected]    = useState(null);
 
   const fetchThreads = useCallback(async () => {
     if (!userId) return;
@@ -411,6 +699,19 @@ export default function MessagesTab({ userId, initialPartnerId, initialPartnerNa
   }, [userId, onUnreadChange]);
 
   useEffect(() => { fetchThreads(); }, [fetchThreads]);
+
+  const handleStartDm = useCallback((friend) => {
+    setMainTab("messages");
+    const existing = threads.find((t) => t.partnerId === friend.id);
+    setSelected(existing ?? {
+      partnerId: friend.id,
+      username: friend.username,
+      memberNames: friend.memberNames ?? [],
+      unread: 0,
+      lastMessage: { content: "", created_at: new Date().toISOString(), sender_id: userId },
+    });
+    setHidden((h) => { const n = new Set(h); n.delete(friend.id); return n; });
+  }, [threads, userId]);
 
   useEffect(() => {
     if (!initialPartnerId || loading) return;
@@ -444,33 +745,43 @@ export default function MessagesTab({ userId, initialPartnerId, initialPartnerNa
       {/* 좌측 목록 */}
       <div className={`flex flex-col border-r bg-white ${selected ? "hidden sm:flex" : "flex"}`}
         style={{ width:"280px", minWidth:"280px", borderColor:"rgba(37,99,235,0.08)" }}>
-        <div className="shrink-0 px-4 py-4 border-b" style={{ borderColor:"rgba(37,99,235,0.08)" }}>
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-bold text-gray-800">개인 메시지</h2>
+        {/* 메인 탭 헤더 */}
+        <div className="shrink-0 flex border-b" style={{ borderColor:"rgba(37,99,235,0.08)" }}>
+          <button onClick={() => setMainTab("messages")}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${mainTab === "messages" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-400 hover:text-gray-600"}`}>
+            메시지
             {totalUnread > 0 && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full font-bold text-white"
+              <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full font-bold text-white"
                 style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)` }}>{totalUnread}</span>
             )}
+          </button>
+          <button onClick={() => setMainTab("friends")}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${mainTab === "friends" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-400 hover:text-gray-600"}`}>
+            친구
+          </button>
+        </div>
+
+        {mainTab === "messages" ? (
+          <div className="flex-1 overflow-y-auto divide-y" style={{ borderColor:"rgba(37,99,235,0.06)" }}>
+            {visible.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <p className="text-sm font-semibold text-gray-500">메시지 없음</p>
+                <p className="text-xs text-gray-400 leading-relaxed">친구 탭에서 친구를 추가하고<br/>대화를 시작해보세요.</p>
+              </div>
+            ) : visible.map((t) => (
+              <ThreadItem key={t.partnerId} t={t} active={selected?.partnerId === t.partnerId}
+                onSelect={(t) => { setSelected(t); setHidden((h) => { const n = new Set(h); n.delete(t.partnerId); return n; }); }}
+                onClose={(pid) => { setHidden((h) => new Set([...h, pid])); if (selected?.partnerId === pid) setSelected(null); }}
+                myUserId={userId}
+              />
+            ))}
           </div>
-        </div>
-        <div className="flex-1 overflow-y-auto divide-y" style={{ borderColor:"rgba(37,99,235,0.06)" }}>
-          {visible.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-              <p className="text-sm font-semibold text-gray-500">개인 메시지 없음</p>
-              <p className="text-xs text-gray-400 leading-relaxed">팀플 방 → 팀원 프로필 →<br/>개인 메시지 버튼으로 시작하세요.</p>
-            </div>
-          ) : visible.map((t) => (
-            <ThreadItem key={t.partnerId} t={t} active={selected?.partnerId === t.partnerId}
-              onSelect={(t) => { setSelected(t); setHidden((h) => { const n = new Set(h); n.delete(t.partnerId); return n; }); }}
-              onClose={(pid) => { setHidden((h) => new Set([...h, pid])); if (selected?.partnerId === pid) setSelected(null); }}
-              myUserId={userId}
-            />
-          ))}
-        </div>
+        ) : (
+          <FriendsPanel userId={userId} onStartDm={handleStartDm} />
+        )}
       </div>
 
       {/* 우측 대화 */}

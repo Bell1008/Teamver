@@ -12,7 +12,6 @@ export async function GET(request, { params }) {
       .select("id, member_id, date, completed_tasks, memo, achievement_rate, created_at, members(name, user_id)")
       .eq("project_id", id)
       .order("date", { ascending: false })
-      .order("created_at", { ascending: false })
       .limit(100);
 
     if (dateFilter) query = query.eq("date", dateFilter);

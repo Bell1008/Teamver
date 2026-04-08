@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useDialog } from "@/components/DialogProvider";
 
-const J = "#059669"; // 일지 그린
-const J2 = "#047857";
+const J  = "#2563eb";
+const J2 = "#1d4ed8";
 
 /* ── 아이콘 ── */
 const CloseIcon  = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;

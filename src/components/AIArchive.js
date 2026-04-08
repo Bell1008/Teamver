@@ -179,54 +179,106 @@ function TextContent({ content }) {
   );
 }
 
-function ArtifactCard({ artifact, onDelete }) {
-  const [expanded, setExpanded] = useState(false);
+/* ── 상세 팝업 모달 ───────────────────────────────────────── */
+function DetailModal({ artifact, onClose, onDelete }) {
   const tc = TYPE_CONFIG[artifact.type] ?? TYPE_CONFIG.summary;
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: "white", border: "1px solid rgba(37,99,235,0.1)", boxShadow: "0 2px 12px rgba(37,99,235,0.06)" }}>
-      {/* 헤더 — 클릭으로 펼치기 */}
-      <button
-        className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-gray-50/80"
-        onClick={() => setExpanded((v) => !v)}
+    <div
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)" }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className="w-full sm:max-w-2xl max-h-[94vh] sm:max-h-[88vh] flex flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl"
+        style={{ background: "white", boxShadow: "0 24px 80px rgba(0,0,0,0.3)" }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: tc.bg, border: `1px solid ${tc.border}` }}>
-          {TypeIcons[artifact.type]?.(tc.color)}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800 truncate">{artifact.title}</p>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs font-semibold" style={{ color: tc.color }}>{tc.label}</span>
-            <span className="text-xs text-gray-400">{formatDate(artifact.created_at)}</span>
+        {/* 모달 헤더 */}
+        <div className="shrink-0 px-5 pt-5 pb-4 relative overflow-hidden"
+          style={{ background: `linear-gradient(135deg, ${tc.color}e8, ${tc.color})` }}>
+          {/* 배경 물방울 데코 */}
+          <div className="absolute top-[-20px] right-[60px] w-24 h-28 rounded-full pointer-events-none"
+            style={{ background: "rgba(255,255,255,0.08)" }} />
+          <div className="relative flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                style={{ backgroundColor: "rgba(255,255,255,0.2)", backdropFilter: "blur(4px)" }}>
+                {TypeIcons[artifact.type]?.("white")}
+              </div>
+              <div className="min-w-0">
+                <p className="text-white/70 text-xs font-semibold">{tc.label}</p>
+                <p className="text-white font-bold text-base leading-tight mt-0.5 break-words">{artifact.title}</p>
+                <p className="text-white/55 text-xs mt-1">{formatDate(artifact.created_at)}</p>
+              </div>
+            </div>
+            <button onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-xl text-white/70 hover:text-white transition-colors shrink-0"
+              style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+
+        {/* 본문 (스크롤) */}
+        <div className="flex-1 overflow-y-auto px-5 py-5">
+          {artifact.type === "kickoff"   && <KickoffContent   content={artifact.content} />}
+          {artifact.type === "aggregate" && <AggregateContent content={artifact.content} />}
+          {(artifact.type === "summary" || artifact.type === "minutes" || artifact.type === "journal") && (
+            <TextContent content={artifact.content} />
+          )}
+        </div>
+
+        {/* 하단 버튼 */}
+        <div className="shrink-0 px-5 py-4 flex justify-end border-t"
+          style={{ borderColor: "rgba(37,99,235,0.08)" }}>
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(artifact.id); }}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+            onClick={() => { onDelete(artifact.id); onClose(); }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+              <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
             </svg>
+            삭제
           </button>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"
-            style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
         </div>
-      </button>
-
-      {/* 펼쳐진 내용 */}
-      {expanded && (
-        <div className="px-4 pb-4 border-t border-gray-50">
-          <div className="pt-4">
-            {artifact.type === "kickoff"   && <KickoffContent   content={artifact.content} />}
-            {artifact.type === "aggregate" && <AggregateContent content={artifact.content} />}
-            {(artifact.type === "summary" || artifact.type === "minutes" || artifact.type === "journal") && <TextContent content={artifact.content} />}
-          </div>
-        </div>
-      )}
+      </div>
     </div>
+  );
+}
+
+/* ── 목록 카드 (클릭 → 상세 팝업) ──────────────────────────── */
+function ArtifactCard({ artifact, onDelete, onOpen }) {
+  const tc = TYPE_CONFIG[artifact.type] ?? TYPE_CONFIG.summary;
+
+  return (
+    <button
+      className="w-full flex items-center gap-3 px-4 py-3.5 text-left rounded-2xl transition-all group"
+      style={{ background: "white", border: "1px solid rgba(37,99,235,0.1)", boxShadow: "0 2px 12px rgba(37,99,235,0.06)" }}
+      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 4px 20px rgba(37,99,235,0.13)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0 2px 12px rgba(37,99,235,0.06)"; e.currentTarget.style.transform = "translateY(0)"; }}
+      onClick={() => onOpen(artifact)}
+    >
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+        style={{ backgroundColor: tc.bg, border: `1px solid ${tc.border}` }}>
+        {TypeIcons[artifact.type]?.(tc.color)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-800 truncate">{artifact.title}</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-xs font-semibold" style={{ color: tc.color }}>{tc.label}</span>
+          <span className="text-xs text-gray-400">{formatDate(artifact.created_at)}</span>
+        </div>
+      </div>
+      {/* 열기 화살표 */}
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round"
+        className="shrink-0 group-hover:stroke-blue-400 transition-colors">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </button>
   );
 }
 
@@ -241,9 +293,10 @@ const FILTER_OPTIONS = [
 
 export default function AIArchive({ projectId, isOpen, onClose, refreshKey }) {
   const dialog = useDialog();
-  const [artifacts, setArtifacts] = useState([]);
-  const [loading, setLoading]     = useState(false);
-  const [filter, setFilter]       = useState("all");
+  const [artifacts, setArtifacts]         = useState([]);
+  const [loading, setLoading]             = useState(false);
+  const [filter, setFilter]               = useState("all");
+  const [selectedArtifact, setSelected]   = useState(null);
 
   const fetchArtifacts = useCallback(async () => {
     setLoading(true);
@@ -264,6 +317,7 @@ export default function AIArchive({ projectId, isOpen, onClose, refreshKey }) {
     if (!await dialog.confirm("이 항목을 삭제하시겠습니까?", { title: "항목 삭제", confirmText: "삭제", danger: true })) return;
     await fetch(`/api/projects/${projectId}/artifacts?artifactId=${artifactId}`, { method: "DELETE" });
     setArtifacts((prev) => prev.filter((a) => a.id !== artifactId));
+    if (selectedArtifact?.id === artifactId) setSelected(null);
   };
 
   if (!isOpen) return null;
@@ -346,11 +400,18 @@ export default function AIArchive({ projectId, isOpen, onClose, refreshKey }) {
               </p>
             </div>
           ) : (
-            filtered.map((a) => <ArtifactCard key={a.id} artifact={a} onDelete={handleDelete} />)
+            filtered.map((a) => <ArtifactCard key={a.id} artifact={a} onDelete={handleDelete} onOpen={setSelected} />)
           )}
           <div className="h-2" />
         </div>
       </div>
+      {selectedArtifact && (
+        <DetailModal
+          artifact={selectedArtifact}
+          onClose={() => setSelected(null)}
+          onDelete={handleDelete}
+        />
+      )}
     </div>
   );
 }

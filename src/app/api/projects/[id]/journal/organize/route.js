@@ -31,11 +31,10 @@ export async function POST(request, { params }) {
         .from("contribution_logs")
         .select("completed_tasks, memo, achievement_rate, members(name)")
         .eq("project_id", id)
-        .eq("date", today)
-        .order("created_at", { ascending: true }),
+        .eq("date", today),
     ]);
     if (error) throw error;
-    if (!logs?.length) return Response.json({ error: "오늘 기여 내용이 없습니다." }, { status: 400 });
+    if (!logs?.length) return Response.json({ error: "오늘 입력된 기여 내용이 없어요. 먼저 팀원들이 기여를 기록해야 합니다." }, { status: 400 });
 
     const persona = getProjectPersona(project);
     const logText = logs
