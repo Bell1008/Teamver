@@ -32,6 +32,11 @@ const TypeIcons = {
       <polyline points="10 9 9 9 8 9"/>
     </svg>
   ),
+  journal: (color) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+    </svg>
+  ),
 };
 
 const TYPE_CONFIG = {
@@ -39,6 +44,7 @@ const TYPE_CONFIG = {
   aggregate: { label: "집계 리포트", color: "#0891b2", bg: "rgba(8,145,178,0.1)",   border: "rgba(8,145,178,0.25)"  },
   summary:   { label: "AI 요약",    color: ACCENT,    bg: "rgba(37,99,235,0.1)",   border: "rgba(37,99,235,0.25)"  },
   minutes:   { label: "회의록",     color: "#059669", bg: "rgba(5,150,105,0.1)",   border: "rgba(5,150,105,0.25)"  },
+  journal:   { label: "팀 일지",    color: "#059669", bg: "rgba(5,150,105,0.08)",  border: "rgba(5,150,105,0.2)"   },
 };
 
 const HEALTH_COLOR = { good: "#16a34a", warning: "#b45309", critical: "#dc2626" };
@@ -216,7 +222,7 @@ function ArtifactCard({ artifact, onDelete }) {
           <div className="pt-4">
             {artifact.type === "kickoff"   && <KickoffContent   content={artifact.content} />}
             {artifact.type === "aggregate" && <AggregateContent content={artifact.content} />}
-            {(artifact.type === "summary" || artifact.type === "minutes") && <TextContent content={artifact.content} />}
+            {(artifact.type === "summary" || artifact.type === "minutes" || artifact.type === "journal") && <TextContent content={artifact.content} />}
           </div>
         </div>
       )}
@@ -230,9 +236,10 @@ const FILTER_OPTIONS = [
   { key: "aggregate", label: "집계" },
   { key: "summary",   label: "AI 요약" },
   { key: "minutes",   label: "회의록" },
+  { key: "journal",   label: "팀 일지" },
 ];
 
-export default function AIArchive({ projectId, isOpen, onClose }) {
+export default function AIArchive({ projectId, isOpen, onClose, refreshKey }) {
   const dialog = useDialog();
   const [artifacts, setArtifacts] = useState([]);
   const [loading, setLoading]     = useState(false);
@@ -251,7 +258,7 @@ export default function AIArchive({ projectId, isOpen, onClose }) {
 
   useEffect(() => {
     if (isOpen) fetchArtifacts();
-  }, [isOpen, fetchArtifacts]);
+  }, [isOpen, fetchArtifacts, refreshKey]);
 
   const handleDelete = async (artifactId) => {
     if (!await dialog.confirm("이 항목을 삭제하시겠습니까?", { title: "항목 삭제", confirmText: "삭제", danger: true })) return;
@@ -261,7 +268,9 @@ export default function AIArchive({ projectId, isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const filtered = filter === "all" ? artifacts : artifacts.filter((a) => a.type === filter);
+  // journal_draft는 보관함에서 제외 (JournalPanel 전용)
+  const visible = artifacts.filter((a) => a.type !== "journal_draft");
+  const filtered = filter === "all" ? visible : visible.filter((a) => a.type === filter);
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center"
@@ -303,7 +312,7 @@ export default function AIArchive({ projectId, isOpen, onClose }) {
         <div className="shrink-0 px-4 py-3 flex gap-1.5 overflow-x-auto"
           style={{ borderBottom: "1px solid rgba(37,99,235,0.08)", background: "white" }}>
           {FILTER_OPTIONS.map(({ key, label }) => {
-            const count = key === "all" ? artifacts.length : artifacts.filter((a) => a.type === key).length;
+            const count = key === "all" ? visible.length : visible.filter((a) => a.type === key).length;
             return (
               <button key={key} onClick={() => setFilter(key)}
                 className="btn-jelly shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"

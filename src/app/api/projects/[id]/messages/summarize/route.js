@@ -79,13 +79,16 @@ ${projectCtx}
       .insert({ project_id: id, member_name: label, content: aiText, is_ai: true })
       .select().single();
 
-    const now = new Date();
-    const artifactTitle = `${label} — ${now.toLocaleDateString("ko-KR", { month:"numeric", day:"numeric" })} ${now.toLocaleTimeString("ko-KR", { hour:"2-digit", minute:"2-digit" })}`;
-    await supabase.from("ai_artifacts").insert({
-      project_id: id, type: mode === "minutes" ? "minutes" : "summary",
-      title: artifactTitle,
-      content: { text: aiText, source_message_count: messages.length },
-    });
+    // 회의록만 보관함에 저장, AI 요약은 채팅창에만 표시
+    if (mode === "minutes") {
+      const now = new Date();
+      const artifactTitle = `회의록 — ${now.toLocaleDateString("ko-KR", { month:"numeric", day:"numeric" })} ${now.toLocaleTimeString("ko-KR", { hour:"2-digit", minute:"2-digit" })}`;
+      await supabase.from("ai_artifacts").insert({
+        project_id: id, type: "minutes",
+        title: artifactTitle,
+        content: { text: aiText, source_message_count: messages.length },
+      });
+    }
 
     return Response.json({ message: saved });
   } catch (err) {

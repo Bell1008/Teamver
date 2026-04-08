@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getSession, getProfile } from "@/lib/auth";
 import ChatPanel from "@/components/ChatPanel";
+import JournalPanel from "@/components/JournalPanel";
 import TasksSection from "@/components/TasksSection";
 import PlanningDocs from "@/components/PlanningDocs";
 import FilesSection from "@/components/FilesSection";
@@ -41,7 +42,9 @@ export default function ProjectDashboard() {
   const [aggregateLoading, setAggregateLoading] = useState(false);
   const [aggregateResult, setAggregateResult]   = useState(null);
   const [archiveOpen, setArchiveOpen]           = useState(false);
-  const [chatOpen, setChatOpen]     = useState(false);
+  const [chatOpen, setChatOpen]         = useState(false);
+  const [journalOpen, setJournalOpen]   = useState(false);
+  const [archiveRefreshKey, setArchiveRefreshKey] = useState(0);
   const [toast, setToast]           = useState(null);
 
   // 프로젝트 수정
@@ -243,15 +246,34 @@ export default function ProjectDashboard() {
         <svg viewBox="0 0 240 280" fill="none"><path d="M120 8C120 8 20 100 20 168C20 228 65 272 120 272C175 272 220 228 220 168C220 100 120 8 120 8Z" fill={ACCENT}/></svg>
       </div>
 
-      {/* 채팅 */}
+      {/* 일지 패널 (좌측) */}
+      <JournalPanel
+        projectId={id}
+        myMemberId={myMemberId}
+        myName={myName}
+        isOpen={journalOpen}
+        onClose={() => setJournalOpen(false)}
+        canManage={isOwner || isAdmin}
+        onJournalCreated={() => { setArchiveRefreshKey((k) => k + 1); setArchiveOpen(true); }}
+      />
+
+      {/* 채팅 패널 (우측) */}
       <ChatPanel projectId={id} myMemberId={myMemberId} myName={myName} accentColor={ACCENT} isOpen={chatOpen} onClose={() => setChatOpen(false)} canUseAI={isOwner || isAdmin} />
 
-      {/* 채팅 버튼 */}
-      {!chatOpen && (
-        <button onClick={() => setChatOpen(true)} className="btn-jelly fixed bottom-6 right-6 z-30 rounded-2xl text-white flex items-center justify-center"
-          style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow:`0 4px 20px rgba(37,99,235,0.5)`, width:52, height:52 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        </button>
+      {/* 플로팅 버튼들 */}
+      {!journalOpen && !chatOpen && (
+        <>
+          {/* 일지 버튼 (좌측 하단) */}
+          <button onClick={() => setJournalOpen(true)} className="btn-jelly fixed bottom-6 left-6 z-30 rounded-2xl text-white flex items-center justify-center"
+            style={{ background:"linear-gradient(135deg, #059669, #047857)", boxShadow:"0 4px 20px rgba(5,150,105,0.5)", width:52, height:52 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </button>
+          {/* 채팅 버튼 (우측 하단) */}
+          <button onClick={() => setChatOpen(true)} className="btn-jelly fixed bottom-6 right-6 z-30 rounded-2xl text-white flex items-center justify-center"
+            style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow:`0 4px 20px rgba(37,99,235,0.5)`, width:52, height:52 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </button>
+        </>
       )}
 
       {/* 토스트 */}
@@ -695,7 +717,7 @@ export default function ProjectDashboard() {
       <AggregateReport report={aggregateResult} onClose={() => setAggregateResult(null)} />
 
       {/* AI 작업물 보관함 */}
-      <AIArchive projectId={id} isOpen={archiveOpen} onClose={() => setArchiveOpen(false)} />
+      <AIArchive projectId={id} isOpen={archiveOpen} onClose={() => setArchiveOpen(false)} refreshKey={archiveRefreshKey} />
 
       <style>{`
         @keyframes fadeInDown {
