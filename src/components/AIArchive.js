@@ -179,6 +179,142 @@ function TextContent({ content }) {
   );
 }
 
+/* ── 인라인 마크다운 렌더러 (**bold**, 나머지 텍스트) ── */
+function renderInline(text) {
+  const parts = String(text).split(/(\*\*[^*]+\*\*)/);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>;
+    }
+    return part || null;
+  });
+}
+
+/* ── 마크다운 전체 렌더러 (모달 전용) ── */
+function MarkdownContent({ content }) {
+  const text = content.text ?? "";
+  const count = content.source_message_count;
+
+  const lines = text.split("\n");
+  const elements = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // h1
+    if (line.startsWith("# ")) {
+      elements.push(
+        <h1 key={i} className="text-lg font-bold text-gray-900 mt-6 mb-3 first:mt-0">
+          {renderInline(line.slice(2))}
+        </h1>
+      );
+      i++; continue;
+    }
+    // h2
+    if (line.startsWith("## ")) {
+      elements.push(
+        <h2 key={i} className="text-sm font-bold mt-5 mb-2 pb-1.5 border-b"
+          style={{ color: ACCENT, borderColor: "rgba(37,99,235,0.15)" }}>
+          {renderInline(line.slice(3))}
+        </h2>
+      );
+      i++; continue;
+    }
+    // h3
+    if (line.startsWith("### ")) {
+      elements.push(
+        <h3 key={i} className="text-sm font-semibold text-gray-800 mt-3 mb-1">
+          {renderInline(line.slice(4))}
+        </h3>
+      );
+      i++; continue;
+    }
+    // 구분선
+    if (/^---+$/.test(line.trim())) {
+      elements.push(<hr key={i} className="my-4 border-gray-100" />);
+      i++; continue;
+    }
+    // 불릿 리스트
+    if (line.startsWith("- ") || line.startsWith("* ")) {
+      const items = [];
+      while (i < lines.length && (lines[i].startsWith("- ") || lines[i].startsWith("* "))) {
+        items.push(
+          <li key={i} className="text-sm text-gray-700 leading-relaxed">
+            {renderInline(lines[i].slice(2))}
+          </li>
+        );
+        i++;
+      }
+      elements.push(
+        <ul key={`ul-${i}`} className="list-disc list-outside pl-5 space-y-1 my-2">
+          {items}
+        </ul>
+      );
+      continue;
+    }
+    // 테이블
+    if (line.includes("|") && line.trim().startsWith("|")) {
+      const tableLines = [];
+      while (i < lines.length && lines[i].includes("|") && lines[i].trim().startsWith("|")) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      // 구분선 행 제거 (| --- | 형태)
+      const dataRows = tableLines.filter((r) => !/^\|[-:\s|]+\|$/.test(r.trim()));
+      elements.push(
+        <div key={`tbl-${i}`} className="overflow-x-auto my-3 rounded-xl border" style={{ borderColor: "rgba(37,99,235,0.12)" }}>
+          <table className="w-full text-xs border-collapse">
+            <tbody>
+              {dataRows.map((row, ri) => {
+                const cells = row.split("|").slice(1, -1); // 앞뒤 빈 항목 제거
+                return (
+                  <tr key={ri} style={{ backgroundColor: ri === 0 ? "rgba(37,99,235,0.06)" : ri % 2 === 1 ? "rgba(37,99,235,0.02)" : "transparent" }}>
+                    {cells.map((cell, ci) =>
+                      ri === 0 ? (
+                        <th key={ci} className="px-3 py-2 text-left font-semibold text-gray-700 border-b"
+                          style={{ borderColor: "rgba(37,99,235,0.12)" }}>
+                          {cell.trim()}
+                        </th>
+                      ) : (
+                        <td key={ci} className="px-3 py-2 text-gray-600 border-b"
+                          style={{ borderColor: "rgba(37,99,235,0.06)" }}>
+                          {renderInline(cell.trim())}
+                        </td>
+                      )
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+    // 빈 줄
+    if (line.trim() === "") { i++; continue; }
+    // 일반 문단
+    elements.push(
+      <p key={i} className="text-sm text-gray-700 leading-relaxed my-1.5">
+        {renderInline(line)}
+      </p>
+    );
+    i++;
+  }
+
+  return (
+    <div>
+      {elements}
+      {count != null && (
+        <p className="text-xs text-gray-400 mt-4 pt-3 border-t border-gray-100">
+          채팅 {count}개 기반
+        </p>
+      )}
+    </div>
+  );
+}
+
 /* ── 상세 팝업 모달 ───────────────────────────────────────── */
 function DetailModal({ artifact, onClose, onDelete }) {
   const tc = TYPE_CONFIG[artifact.type] ?? TYPE_CONFIG.summary;
@@ -227,7 +363,7 @@ function DetailModal({ artifact, onClose, onDelete }) {
           {artifact.type === "kickoff"   && <KickoffContent   content={artifact.content} />}
           {artifact.type === "aggregate" && <AggregateContent content={artifact.content} />}
           {(artifact.type === "summary" || artifact.type === "minutes" || artifact.type === "journal") && (
-            <TextContent content={artifact.content} />
+            <MarkdownContent content={artifact.content} />
           )}
         </div>
 
