@@ -119,8 +119,9 @@ function ThreadItem({ t, active, onSelect, onClose, myUserId }) {
   const lastText = t.lastMessage.file_name
     ? `파일: ${t.lastMessage.file_name}`
     : t.lastMessage.content;
-  const displayName = t.username;
-  const teamNames = formatMemberNames(t.memberNames);
+  // 팀플명 우선, 없으면 username
+  const memberDisplay = formatMemberNames(t.memberNames);
+  const displayName = memberDisplay || t.username || "알 수 없음";
 
   return (
     <div
@@ -140,7 +141,6 @@ function ThreadItem({ t, active, onSelect, onClose, myUserId }) {
         <div className="flex items-center justify-between mb-0.5">
           <div className="min-w-0">
             <span className="text-sm font-semibold text-gray-800 truncate">{displayName}</span>
-            {teamNames && <span className="ml-1.5 text-xs text-gray-400">({teamNames})</span>}
           </div>
           <span className="text-xs text-gray-400 shrink-0 ml-2">{timeAgo(t.lastMessage.created_at)}</span>
         </div>
@@ -312,7 +312,9 @@ function MessageView({ thread, myUserId, onBack }) {
     finally { setSending(false); inputRef.current?.focus(); }
   };
 
-  const partnerInitial = thread.username[0]?.toUpperCase() ?? "?";
+  // 팀플명 우선 표시
+  const threadDisplayName = formatMemberNames(thread.memberNames) || thread.username || "알 수 없음";
+  const partnerInitial = threadDisplayName[0]?.toUpperCase() ?? "?";
 
   return (
     <div className="flex flex-col h-full relative">
@@ -333,10 +335,7 @@ function MessageView({ thread, myUserId, onBack }) {
             {partnerInitial}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-800 leading-tight">{thread.username}</p>
-            {formatMemberNames(thread.memberNames) && (
-              <p className="text-xs text-gray-400">{formatMemberNames(thread.memberNames)}</p>
-            )}
+            <p className="text-sm font-bold text-gray-800 leading-tight">{threadDisplayName}</p>
           </div>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" className="shrink-0">
             <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
@@ -351,7 +350,7 @@ function MessageView({ thread, myUserId, onBack }) {
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
-            <p className="text-sm text-gray-400">{thread.username}님과 대화를 시작해보세요.</p>
+            <p className="text-sm text-gray-400">{threadDisplayName}님과 대화를 시작해보세요.</p>
           </div>
         )}
         {messages.map((m) => (
@@ -380,7 +379,7 @@ function MessageView({ thread, myUserId, onBack }) {
         <input ref={inputRef}
           className="flex-1 rounded-2xl px-4 py-2.5 text-sm border outline-none"
           style={{ borderColor:"rgba(37,99,235,0.15)", backgroundColor:"#f8faff" }}
-          placeholder={`${thread.username}님에게 메시지...`}
+          placeholder={`${threadDisplayName}님에게 메시지...`}
           value={input} onChange={(e) => setInput(e.target.value)} disabled={sending || uploading}
         />
         <button type="submit" disabled={!input.trim() || sending || uploading}
@@ -416,7 +415,7 @@ export default function MessagesTab({ userId, initialPartnerId, initialPartnerNa
   useEffect(() => {
     if (!initialPartnerId || loading) return;
     const existing = threads.find((t) => t.partnerId === initialPartnerId);
-    setSelected(existing ?? { partnerId: initialPartnerId, username: initialPartnerName ?? "팀원", memberNames: [], unread: 0, lastMessage: { content:"", created_at: new Date().toISOString(), sender_id: userId } });
+    setSelected(existing ?? { partnerId: initialPartnerId, username: initialPartnerName ?? "팀원", memberNames: initialPartnerName ? [initialPartnerName] : [], unread: 0, lastMessage: { content:"", created_at: new Date().toISOString(), sender_id: userId } });
     setHidden((h) => { const n = new Set(h); n.delete(initialPartnerId); return n; });
   }, [initialPartnerId, initialPartnerName, loading, threads, userId]);
 

@@ -3,12 +3,16 @@ import { supabase } from "@/lib/supabase";
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const { data, error } = await supabase
+    const { searchParams } = new URL(request.url);
+    const typeFilter = searchParams.get("type"); // e.g. ?type=journal_draft
+    let query = supabase
       .from("ai_artifacts")
       .select("id, type, title, content, created_at")
       .eq("project_id", id)
       .order("created_at", { ascending: false })
       .limit(100);
+    if (typeFilter) query = query.eq("type", typeFilter);
+    const { data, error } = await query;
     if (error) throw error;
     return Response.json(data ?? []);
   } catch (err) {
