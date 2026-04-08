@@ -422,7 +422,6 @@ const FILTER_OPTIONS = [
   { key: "all",       label: "전체" },
   { key: "kickoff",   label: "킥오프" },
   { key: "aggregate", label: "집계" },
-  { key: "summary",   label: "AI 요약" },
   { key: "minutes",   label: "회의록" },
   { key: "journal",   label: "팀 일지" },
 ];
