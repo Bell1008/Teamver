@@ -48,6 +48,10 @@ function PartnerProfileModal({ partnerId, myUserId, onClose }) {
     </div>
   );
 
+  // 팀플 이름 우선, 없으면 계정 username
+  const displayName = formatMemberNames(info.memberNames) || info.username || "알 수 없음";
+  const showUsername = info.username && info.username !== "알 수 없음" && info.username !== displayName;
+
   return (
     <div className="absolute inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl bg-white">
@@ -58,12 +62,12 @@ function PartnerProfileModal({ partnerId, myUserId, onClose }) {
           </button>
           <div className="flex items-center gap-3">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-black text-white" style={{ background: "rgba(255,255,255,0.2)", backdropFilter:"blur(4px)" }}>
-              {info.username[0]?.toUpperCase()}
+              {displayName[0]?.toUpperCase() ?? "?"}
             </div>
             <div>
-              <p className="text-white font-bold text-base">{info.username}</p>
-              {info.memberNames.length > 0 && (
-                <p className="text-white/60 text-xs mt-0.5">팀플 이름: {info.memberNames.join(", ")}</p>
+              <p className="text-white font-bold text-base">{displayName}</p>
+              {showUsername && (
+                <p className="text-white/60 text-xs mt-0.5">@{info.username}</p>
               )}
             </div>
           </div>
@@ -396,20 +400,23 @@ function MessageView({ thread, myUserId, onBack }) {
 function FriendItem({ friend, onStartDm }) {
   const displayName = formatMemberNames(friend.memberNames) || friend.username;
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-        style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow:"0 2px 8px rgba(37,99,235,0.25)" }}>
+    <div className="flex items-center gap-3 px-4 py-3 transition-all duration-150 cursor-default"
+      style={{ borderBottom:"1px solid rgba(37,99,235,0.05)" }}
+      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(37,99,235,0.04)"; e.currentTarget.style.transform = "translateX(2px)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; e.currentTarget.style.transform = ""; }}>
+      <div className="w-9 h-9 rounded-2xl flex items-center justify-center text-sm font-bold text-white shrink-0 transition-transform duration-150"
+        style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow:"0 3px 10px rgba(37,99,235,0.3)" }}>
         {displayName[0]?.toUpperCase() ?? "?"}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
         {formatMemberNames(friend.memberNames) && friend.username && formatMemberNames(friend.memberNames) !== friend.username && (
-          <p className="text-xs text-gray-400 truncate">{friend.username}</p>
+          <p className="text-xs text-gray-400 truncate">@{friend.username}</p>
         )}
       </div>
       <button onClick={() => onStartDm(friend)}
         className="btn-jelly shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold text-white"
-        style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)` }}>
+        style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow:"0 2px 8px rgba(37,99,235,0.25)" }}>
         메시지
       </button>
     </div>
@@ -420,26 +427,31 @@ function FriendItem({ friend, onStartDm }) {
 function RequestItem({ req, type, onAction }) {
   const displayName = formatMemberNames(req.memberNames) || req.username;
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-        style={{ background:"linear-gradient(135deg, #64748b, #475569)" }}>
+    <div className="flex items-center gap-3 px-4 py-3 transition-all duration-150"
+      style={{ borderBottom:"1px solid rgba(37,99,235,0.05)" }}
+      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(37,99,235,0.03)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; }}>
+      <div className="w-9 h-9 rounded-2xl flex items-center justify-center text-sm font-bold text-white shrink-0"
+        style={{ background:"linear-gradient(135deg, #94a3b8, #64748b)", boxShadow:"0 2px 6px rgba(100,116,139,0.2)" }}>
         {displayName[0]?.toUpperCase() ?? "?"}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
-        <p className="text-xs text-gray-400">{type === "received" ? "친구 요청을 보냈습니다" : "요청 보냄"}</p>
+        <p className="text-xs text-blue-400">{type === "received" ? "친구 요청을 보냈어요" : "요청 보냄"}</p>
       </div>
       {type === "received" ? (
         <div className="flex gap-1.5 shrink-0">
           <button onClick={() => onAction(req.id, "accept")}
             className="btn-jelly px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white"
-            style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)` }}>수락</button>
+            style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow:"0 2px 6px rgba(37,99,235,0.25)" }}>수락</button>
           <button onClick={() => onAction(req.id, "reject")}
-            className="btn-jelly px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200">거절</button>
+            className="btn-jelly px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-500"
+            style={{ background:"rgba(37,99,235,0.07)", border:"1px solid rgba(37,99,235,0.1)" }}>거절</button>
         </div>
       ) : (
         <button onClick={() => onAction(req.id, "cancel")}
-          className="btn-jelly shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200">취소</button>
+          className="btn-jelly shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-500"
+          style={{ background:"rgba(37,99,235,0.07)", border:"1px solid rgba(37,99,235,0.1)" }}>취소</button>
       )}
     </div>
   );
@@ -453,12 +465,13 @@ function SearchResultItem({ user, onSendRequest, onAction }) {
     actionButton = (
       <button onClick={() => onSendRequest(user.id)}
         className="btn-jelly shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white"
-        style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)` }}>요청</button>
+        style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow:"0 2px 6px rgba(37,99,235,0.25)" }}>요청</button>
     );
   } else if (user.relation === "pending_sent") {
     actionButton = (
       <button onClick={() => onAction(user.requestId, "cancel")}
-        className="btn-jelly shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200">취소</button>
+        className="btn-jelly shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-blue-500"
+        style={{ background:"rgba(37,99,235,0.08)", border:"1px solid rgba(37,99,235,0.15)" }}>취소</button>
     );
   } else if (user.relation === "pending_received") {
     actionButton = (
@@ -467,21 +480,28 @@ function SearchResultItem({ user, onSendRequest, onAction }) {
           className="btn-jelly px-2.5 py-1.5 rounded-xl text-xs font-semibold text-white"
           style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)` }}>수락</button>
         <button onClick={() => onAction(user.requestId, "reject")}
-          className="btn-jelly px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200">거절</button>
+          className="btn-jelly px-2.5 py-1.5 rounded-xl text-xs font-semibold text-gray-500"
+          style={{ background:"rgba(37,99,235,0.07)" }}>거절</button>
       </div>
     );
   } else {
-    actionButton = <span className="shrink-0 text-xs font-semibold text-blue-500 px-1">친구</span>;
+    actionButton = (
+      <span className="shrink-0 text-xs font-bold px-2 py-1 rounded-xl"
+        style={{ color: ACCENT, background:"rgba(37,99,235,0.1)", border:"1px solid rgba(37,99,235,0.15)" }}>친구</span>
+    );
   }
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-        style={{ background:"linear-gradient(135deg, #64748b, #475569)" }}>
+    <div className="flex items-center gap-3 px-4 py-3 transition-all duration-150"
+      style={{ borderBottom:"1px solid rgba(37,99,235,0.05)" }}
+      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "rgba(37,99,235,0.03)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; }}>
+      <div className="w-9 h-9 rounded-2xl flex items-center justify-center text-sm font-bold text-white shrink-0"
+        style={{ background:"linear-gradient(135deg, #94a3b8, #64748b)", boxShadow:"0 2px 6px rgba(100,116,139,0.2)" }}>
         {displayName[0]?.toUpperCase() ?? "?"}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
-        {user.memberNames?.length > 0 && <p className="text-xs text-gray-400 truncate">{user.username}</p>}
+        {user.memberNames?.length > 0 && <p className="text-xs text-gray-400 truncate">@{user.username}</p>}
       </div>
       {actionButton}
     </div>
@@ -515,7 +535,6 @@ function FriendsPanel({ userId, onStartDm }) {
     Promise.all([fetchFriends(), fetchRequests()]).finally(() => setLoading(false));
   }, [fetchFriends, fetchRequests]);
 
-  // Realtime 구독
   useEffect(() => {
     if (!userId) return;
     const ch = supabase.channel(`friends-panel-${userId}`)
@@ -525,7 +544,6 @@ function FriendsPanel({ userId, onStartDm }) {
     return () => supabase.removeChannel(ch);
   }, [userId, fetchFriends, fetchRequests]);
 
-  // 디바운스 검색
   useEffect(() => {
     clearTimeout(searchTimerRef.current);
     if (!searchQ.trim()) { setSearchResults([]); return; }
@@ -542,23 +560,18 @@ function FriendsPanel({ userId, onStartDm }) {
 
   const sendRequest = async (recipientId) => {
     const res = await fetch("/api/friends", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ senderId: userId, recipientId }),
     });
     if (res.ok) {
-      // 낙관적 업데이트
-      setSearchResults((prev) => prev.map((u) =>
-        u.id === recipientId ? { ...u, relation: "pending_sent" } : u
-      ));
+      setSearchResults((prev) => prev.map((u) => u.id === recipientId ? { ...u, relation: "pending_sent" } : u));
       fetchRequests();
     }
   };
 
   const handleAction = async (requestId, action) => {
     const res = await fetch(`/api/friends/requests/${requestId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action }),
     });
     if (res.ok) {
@@ -575,36 +588,51 @@ function FriendsPanel({ userId, onStartDm }) {
 
   if (loading) return (
     <div className="flex-1 flex items-center justify-center">
-      <div className="w-6 h-6 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin"/>
+      <div className="w-6 h-6 rounded-full border-2 border-blue-100 border-t-blue-400 animate-spin"/>
     </div>
   );
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
+    <div className="flex flex-col flex-1 overflow-hidden relative" style={{ background:"linear-gradient(180deg,#f0f6ff 0%,#ffffff 60%)" }}>
+      {/* 물방울 데코 */}
+      <div className="pointer-events-none absolute top-0 right-0 w-32 h-32 rounded-full opacity-[0.07]"
+        style={{ background:`radial-gradient(circle, ${ACCENT}, #1d4ed8)`, transform:"translate(30%,-30%)" }}/>
+      <div className="pointer-events-none absolute bottom-16 left-0 w-20 h-20 rounded-full opacity-[0.05]"
+        style={{ background:`radial-gradient(circle, ${ACCENT}, #1d4ed8)`, transform:"translate(-40%,0)" }}/>
+
       {/* 서브 탭 */}
-      <div className="shrink-0 flex border-b" style={{ borderColor:"rgba(37,99,235,0.08)" }}>
-        <button onClick={() => setSubTab("list")}
-          className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${subTab === "list" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-400 hover:text-gray-600"}`}>
-          친구목록{friends.length > 0 && <span className="opacity-60 ml-1">({friends.length})</span>}
-        </button>
-        <button onClick={() => setSubTab("requests")}
-          className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${subTab === "requests" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-400 hover:text-gray-600"}`}>
-          요청
-          {receivedCount > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 text-xs font-bold text-white rounded-full"
-              style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)` }}>{receivedCount}</span>
-          )}
-        </button>
+      <div className="shrink-0 flex relative z-10" style={{ borderBottom:"1px solid rgba(37,99,235,0.1)", background:"rgba(255,255,255,0.8)", backdropFilter:"blur(8px)" }}>
+        {[
+          { key:"list",     label:`친구목록${friends.length > 0 ? ` (${friends.length})` : ""}` },
+          { key:"requests", label:"요청", badge: receivedCount },
+        ].map(({ key, label, badge }) => (
+          <button key={key} onClick={() => setSubTab(key)}
+            className="flex-1 py-3 text-xs font-semibold transition-all duration-200 relative"
+            style={{ color: subTab === key ? ACCENT : "#94a3b8" }}>
+            {label}
+            {badge > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold text-white rounded-full"
+                style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)` }}>{badge}</span>
+            )}
+            {subTab === key && (
+              <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 rounded-full"
+                style={{ background:`linear-gradient(90deg, ${ACCENT}, #1d4ed8)` }}/>
+            )}
+          </button>
+        ))}
       </div>
 
       {subTab === "list" ? (
-        <div className="flex-1 overflow-y-auto divide-y" style={{ borderColor:"rgba(37,99,235,0.06)" }}>
+        <div className="flex-1 overflow-y-auto relative z-10">
           {friends.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6 py-10">
+              <div className="w-14 h-14 rounded-3xl flex items-center justify-center"
+                style={{ background:"linear-gradient(135deg, rgba(37,99,235,0.1), rgba(29,78,216,0.06))", boxShadow:"inset 0 1px 2px rgba(37,99,235,0.1)" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="1.5" strokeLinecap="round" opacity="0.5">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </div>
               <p className="text-sm font-semibold text-gray-500">친구가 없습니다</p>
               <p className="text-xs text-gray-400 leading-relaxed">요청 탭에서 유저를 검색해<br/>친구 요청을 보내보세요.</p>
             </div>
@@ -613,30 +641,37 @@ function FriendsPanel({ userId, onStartDm }) {
           )}
         </div>
       ) : (
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden relative z-10">
           {/* 검색창 */}
-          <div className="shrink-0 px-3 py-2.5" style={{ borderBottom:"1px solid rgba(37,99,235,0.06)" }}>
+          <div className="shrink-0 px-3 py-2.5" style={{ borderBottom:"1px solid rgba(37,99,235,0.08)", background:"rgba(255,255,255,0.9)" }}>
             <div className="relative">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
-                className="w-full pl-8 pr-3 py-2 rounded-xl text-xs border outline-none"
-                style={{ borderColor:"rgba(37,99,235,0.15)", backgroundColor:"#f8faff" }}
+                className="w-full pl-8 pr-3 py-2 rounded-2xl text-xs outline-none transition-all duration-200"
+                style={{ border:"1.5px solid rgba(37,99,235,0.15)", backgroundColor:"rgba(248,250,255,0.9)", color:"#1e293b" }}
                 placeholder="유저명으로 검색..."
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
+                onFocus={(e) => { e.currentTarget.style.borderColor = `rgba(37,99,235,0.4)`; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(37,99,235,0.08)`; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(37,99,235,0.15)"; e.currentTarget.style.boxShadow = "none"; }}
               />
-              {searching && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border border-blue-200 border-t-blue-500 animate-spin"/>
-              )}
+              {searching && <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border border-blue-200 border-t-blue-500 animate-spin"/>}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto divide-y" style={{ borderColor:"rgba(37,99,235,0.06)" }}>
+          <div className="flex-1 overflow-y-auto">
             {searchQ.trim() ? (
               searchResults.length === 0 && !searching ? (
-                <p className="text-xs text-gray-400 text-center py-8">검색 결과 없음</p>
+                <div className="flex flex-col items-center justify-center py-10 gap-2 text-center px-4">
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background:"rgba(37,99,235,0.06)" }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round">
+                      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                  </div>
+                  <p className="text-xs text-gray-400">검색 결과 없음</p>
+                </div>
               ) : (
                 searchResults.map((u) => (
                   <SearchResultItem key={u.id} user={u} onSendRequest={sendRequest} onAction={handleAction} />
@@ -646,28 +681,32 @@ function FriendsPanel({ userId, onStartDm }) {
               <>
                 {receivedCount > 0 && (
                   <>
-                    <div className="px-4 py-1.5 bg-gray-50">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">받은 요청</p>
+                    <div className="px-4 py-2" style={{ background:"rgba(37,99,235,0.04)", borderBottom:"1px solid rgba(37,99,235,0.06)" }}>
+                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color:ACCENT }}>받은 요청</p>
                     </div>
-                    {requests.received.map((r) => (
-                      <RequestItem key={r.id} req={r} type="received" onAction={handleAction} />
-                    ))}
+                    {requests.received.map((r) => <RequestItem key={r.id} req={r} type="received" onAction={handleAction} />)}
                   </>
                 )}
                 {(requests.sent?.length ?? 0) > 0 && (
                   <>
-                    <div className="px-4 py-1.5 bg-gray-50">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">보낸 요청</p>
+                    <div className="px-4 py-2" style={{ background:"rgba(37,99,235,0.04)", borderBottom:"1px solid rgba(37,99,235,0.06)" }}>
+                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color:ACCENT }}>보낸 요청</p>
                     </div>
-                    {requests.sent.map((r) => (
-                      <RequestItem key={r.id} req={r} type="sent" onAction={handleAction} />
-                    ))}
+                    {requests.sent.map((r) => <RequestItem key={r.id} req={r} type="sent" onAction={handleAction} />)}
                   </>
                 )}
                 {receivedCount === 0 && (requests.sent?.length ?? 0) === 0 && (
-                  <div className="flex flex-col items-center justify-center py-10 gap-2 text-center px-4">
+                  <div className="flex flex-col items-center justify-center py-12 gap-2 text-center px-6">
+                    <div className="w-12 h-12 rounded-3xl flex items-center justify-center"
+                      style={{ background:"linear-gradient(135deg, rgba(37,99,235,0.08), rgba(29,78,216,0.04))" }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth="1.5" strokeLinecap="round" opacity="0.5">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+                      </svg>
+                    </div>
                     <p className="text-sm font-semibold text-gray-500">요청 없음</p>
-                    <p className="text-xs text-gray-400">위 검색창으로 유저를 찾아<br/>친구 요청을 보낼 수 있습니다.</p>
+                    <p className="text-xs text-gray-400 leading-relaxed">검색창으로 유저를 찾아<br/>친구 요청을 보낼 수 있습니다.</p>
                   </div>
                 )}
               </>
