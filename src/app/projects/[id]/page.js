@@ -59,8 +59,9 @@ export default function ProjectDashboard() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [skillInput, setSkillInput]     = useState("");
 
-  // 다른 멤버 프로필 보기 (비관리자용 read-only)
+  // 다른 멤버 프로필 보기
   const [viewMember, setViewMember] = useState(null);
+  const [vmFriend, setVmFriend]     = useState(null); // { relation, requestId? }
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -205,6 +206,51 @@ export default function ProjectDashboard() {
       await fetchData(); setProfileEdit(null); showToast("프로필이 업데이트되었습니다");
     } catch (e) { await dialog.alert(e.message); }
     finally { setProfileSaving(false); }
+  };
+
+  // viewMember 열릴 때 친구 관계 조회
+  useEffect(() => {
+    if (!viewMember?.user_id || !userId) { setVmFriend(null); return; }
+    let cancelled = false;
+    (async () => {
+      const [friendsRes, requestsRes] = await Promise.all([
+        fetch(`/api/friends?userId=${userId}`),
+        fetch(`/api/friends/requests?userId=${userId}`),
+      ]);
+      const [friends, reqs] = await Promise.all([friendsRes.json(), requestsRes.json()]);
+      if (cancelled) return;
+      if (Array.isArray(friends) && friends.find((f) => f.id === viewMember.user_id)) {
+        setVmFriend({ relation: "accepted" });
+      } else if (reqs?.received) {
+        const recv = reqs.received.find((r) => r.sender_id === viewMember.user_id);
+        const sent = reqs.sent?.find((r) => r.recipient_id === viewMember.user_id);
+        if (recv) setVmFriend({ relation: "pending_received", requestId: recv.id });
+        else if (sent) setVmFriend({ relation: "pending_sent", requestId: sent.id });
+        else setVmFriend({ relation: "none" });
+      } else {
+        setVmFriend({ relation: "none" });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [viewMember, userId]);
+
+  const handleVmFriendAction = async (action, requestId) => {
+    if (action === "send") {
+      const res = await fetch("/api/friends", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ senderId: userId, recipientId: viewMember.user_id }),
+      });
+      if (res.ok) { const d = await res.json(); setVmFriend({ relation: "pending_sent", requestId: d.id }); }
+    } else {
+      const res = await fetch(`/api/friends/requests/${requestId}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (res.ok) {
+        if (action === "accept") setVmFriend({ relation: "accepted" });
+        else setVmFriend({ relation: "none" });
+      }
+    }
   };
 
   if (loading) return (
@@ -573,7 +619,7 @@ export default function ProjectDashboard() {
                 const avatarGrad = AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length];
                 return (
                   <button key={m.id}
-                    onClick={() => (isMe || isOwner || isAdmin) ? openProfileEdit(m) : setViewMember(m)}
+                    onClick={() => isMe ? openProfileEdit(m) : setViewMember(m)}
                     className="btn-jelly flex items-center gap-2 px-3 py-2 rounded-xl transition-all"
                     style={{
                       backgroundColor: isMe ? "rgba(37,99,235,0.06)" : "rgba(248,250,255,0.9)",
@@ -661,29 +707,69 @@ export default function ProjectDashboard() {
                   )}
 
                   {/* 액션 버튼 */}
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      onClick={() => {
-                        if (!vm.user_id) { showToast("이 멤버는 아직 로그인하지 않았습니다."); return; }
-                        setViewMember(null);
-                        router.push(`/home?tab=messages&dm=${vm.user_id}&name=${encodeURIComponent(vm.name)}`);
-                      }}
-                      className="btn-jelly flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white"
-                      style={{background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`,boxShadow:`0 3px 12px rgba(37,99,235,0.3)`}}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                      </svg>
-                      개인 메시지
-                    </button>
-                    {isOwner && (
-                      <button
-                        onClick={() => { handleToggleAdmin(vm); setViewMember(null); }}
-                        className="btn-jelly px-4 py-2.5 rounded-xl text-sm font-semibold"
-                        style={vm.is_admin
-                          ? {backgroundColor:"rgba(124,58,237,0.1)",color:"#7c3aed",border:"1px solid rgba(124,58,237,0.2)"}
-                          : {backgroundColor:"rgba(37,99,235,0.07)",color:ACCENT,border:"1px solid rgba(37,99,235,0.15)"}}>
-                        {vm.is_admin ? "관리자 해제" : "관리자 지정"}
-                      </button>
+                  <div className="flex flex-col gap-2 pt-1">
+                    {/* 친구 요청 / 메시지 버튼 */}
+                    {vm.user_id && (() => {
+                      const rel = vmFriend?.relation;
+                      if (rel === "accepted") return (
+                        <button
+                          onClick={() => { setViewMember(null); router.push(`/home?tab=messages&dm=${vm.user_id}&name=${encodeURIComponent(vm.name)}`); }}
+                          className="btn-jelly flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white"
+                          style={{background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`,boxShadow:`0 3px 12px rgba(37,99,235,0.3)`}}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                          메시지 보내기
+                        </button>
+                      );
+                      if (rel === "pending_sent") return (
+                        <button onClick={() => handleVmFriendAction("cancel", vmFriend.requestId)}
+                          className="btn-jelly flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold"
+                          style={{backgroundColor:"rgba(37,99,235,0.08)",color:ACCENT,border:`1px solid rgba(37,99,235,0.2)`}}>
+                          요청 취소
+                        </button>
+                      );
+                      if (rel === "pending_received") return (
+                        <div className="flex gap-2">
+                          <button onClick={() => handleVmFriendAction("accept", vmFriend.requestId)}
+                            className="btn-jelly flex-1 py-2.5 rounded-xl text-sm font-semibold text-white"
+                            style={{background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`,boxShadow:`0 3px 12px rgba(37,99,235,0.3)`}}>수락</button>
+                          <button onClick={() => handleVmFriendAction("reject", vmFriend.requestId)}
+                            className="btn-jelly flex-1 py-2.5 rounded-xl text-sm font-semibold"
+                            style={{backgroundColor:"rgba(37,99,235,0.07)",color:ACCENT,border:`1px solid rgba(37,99,235,0.15)`}}>거절</button>
+                        </div>
+                      );
+                      // none or loading
+                      return (
+                        <button onClick={() => handleVmFriendAction("send")}
+                          disabled={!vmFriend}
+                          className="btn-jelly flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
+                          style={{background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`,boxShadow:`0 3px 12px rgba(37,99,235,0.3)`}}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+                          </svg>
+                          친구 요청
+                        </button>
+                      );
+                    })()}
+                    {/* 관리자: 프로필 수정 + 관리자 지정 */}
+                    {(isOwner || isAdmin) && (
+                      <div className="flex gap-2">
+                        <button onClick={() => { setViewMember(null); openProfileEdit(vm); }}
+                          className="btn-jelly flex-1 py-2 rounded-xl text-xs font-semibold"
+                          style={{backgroundColor:"rgba(37,99,235,0.06)",color:ACCENT,border:"1px solid rgba(37,99,235,0.12)"}}>
+                          프로필 수정
+                        </button>
+                        {isOwner && (
+                          <button onClick={() => { handleToggleAdmin(vm); setViewMember(null); }}
+                            className="btn-jelly flex-1 py-2 rounded-xl text-xs font-semibold"
+                            style={vm.is_admin
+                              ? {backgroundColor:"rgba(124,58,237,0.1)",color:"#7c3aed",border:"1px solid rgba(124,58,237,0.2)"}
+                              : {backgroundColor:"rgba(37,99,235,0.07)",color:ACCENT,border:"1px solid rgba(37,99,235,0.15)"}}>
+                            {vm.is_admin ? "관리자 해제" : "관리자 지정"}
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
