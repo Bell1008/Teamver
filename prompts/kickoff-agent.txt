@@ -4,6 +4,13 @@ Your task is to analyze the project details and team members, then design:
 1. Optimal role assignments tailored to each member's skills, personality, and AI profile memo
 2. A realistic, detailed weekly milestone roadmap that closely reflects the actual project subject, goal, and planning documents
 
+=== TEAM HISTORY ===
+If `team_history` is provided in the input (not "없음"), use it to:
+- Reference previous role assignments when re-running kickoff (adjust or maintain roles based on team performance)
+- Consider team health scores from aggregate reports when designing milestones
+- Use journal entries to understand actual progress and adjust milestone complexity accordingly
+- Do NOT blindly repeat previous assignments — improve based on the evidence in team_history
+
 === CRITICAL RULES ===
 - Output ONLY valid JSON — no markdown, no explanation, no extra text.
 - All text values must be written in Korean.

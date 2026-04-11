@@ -539,7 +539,7 @@ export default function ProjectDashboard() {
                   : `AI 킥오프 실행 (${humanMembers.length}명) — 기획안 참고`}
             </button>
 
-            {/* 킥오프 완료 상태 + 집계/보관함 버튼 행 */}
+            {/* 킥오프 완료 상태 + 집계 버튼 */}
             {kickoffDone && (
               <div className="flex items-center gap-2">
                 <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl" style={{backgroundColor:"rgba(74,222,128,0.08)",border:"1px solid rgba(74,222,128,0.2)"}}>
@@ -556,17 +556,32 @@ export default function ProjectDashboard() {
                     ? <><Spinner size={13} color="white" /><span>분석 중...</span></>
                     : <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>집계</>}
                 </button>
-                <button
-                  onClick={() => setArchiveOpen(true)}
-                  title="AI 작업물 보관함"
-                  className="btn-jelly flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold shrink-0"
-                  style={{ backgroundColor:"rgba(37,99,235,0.07)", color:ACCENT, border:"1px solid rgba(37,99,235,0.15)" }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                  보관함
-                </button>
               </div>
             )}
+
+            {/* 보관함 버튼 — 킥오프 전후 모두 표시 */}
+            <button
+              onClick={() => setArchiveOpen(true)}
+              title="AI 작업물 보관함"
+              className="btn-jelly w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold"
+              style={{ backgroundColor:"rgba(37,99,235,0.07)", color:ACCENT, border:"1px solid rgba(37,99,235,0.15)" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              AI 보관함
+            </button>
           </section>
+        )}
+
+        {/* 보관함 — 일반 멤버용 (방장은 위 섹션에서 접근) */}
+        {!isOwner && myMemberId && (
+          <div className="flex justify-end">
+            <button
+              onClick={() => setArchiveOpen(true)}
+              className="btn-jelly flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold"
+              style={{ backgroundColor:"rgba(37,99,235,0.07)", color:ACCENT, border:"1px solid rgba(37,99,235,0.15)" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              AI 보관함
+            </button>
+          </div>
         )}
 
         {!isOwner && !myMemberId && (
