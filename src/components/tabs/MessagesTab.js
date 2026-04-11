@@ -380,11 +380,24 @@ function MessageView({ thread, myUserId, onBack }) {
           className="btn-jelly w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors shrink-0 disabled:opacity-40">
           <ClipIcon />
         </button>
-        <input ref={inputRef}
-          className="flex-1 rounded-2xl px-4 py-2.5 text-sm border outline-none"
-          style={{ borderColor:"rgba(37,99,235,0.15)", backgroundColor:"#f8faff" }}
-          placeholder={`${threadDisplayName}님에게 메시지...`}
-          value={input} onChange={(e) => setInput(e.target.value)} disabled={sending || uploading}
+        <textarea ref={inputRef}
+          rows={1}
+          className="flex-1 rounded-2xl px-4 py-2.5 text-sm border outline-none resize-none overflow-hidden"
+          style={{ borderColor:"rgba(37,99,235,0.15)", backgroundColor:"#f8faff", lineHeight:"1.5", maxHeight:"100px", overflowY:"auto" }}
+          placeholder={`${threadDisplayName}님에게 메시지... (Shift+Enter 줄바꿈)`}
+          value={input}
+          onChange={(e) => {
+            setInput(e.target.value);
+            e.target.style.height = "auto";
+            e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px";
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              if (input.trim() && !sending && !uploading) handleSend(e);
+            }
+          }}
+          disabled={sending || uploading}
         />
         <button type="submit" disabled={!input.trim() || sending || uploading}
           className="btn-jelly w-10 h-10 rounded-2xl flex items-center justify-center text-white disabled:opacity-40 shrink-0"

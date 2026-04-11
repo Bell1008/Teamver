@@ -306,20 +306,18 @@ export default function ProjectDashboard() {
       {/* 채팅 패널 (우측) */}
       <ChatPanel projectId={id} myMemberId={myMemberId} myName={myName} accentColor={ACCENT} isOpen={chatOpen} onClose={() => setChatOpen(false)} canUseAI={isOwner || isAdmin} />
 
-      {/* 플로팅 버튼들 */}
-      {!journalOpen && !chatOpen && (
-        <>
-          {/* 일지 버튼 (좌측 하단) */}
-          <button onClick={() => setJournalOpen(true)} className="btn-jelly fixed bottom-6 left-6 z-30 rounded-2xl text-white flex items-center justify-center"
-            style={{ background:"linear-gradient(135deg, #6366f1, #4f46e5)", boxShadow:"0 4px 20px rgba(99,102,241,0.5)", width:52, height:52 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          </button>
-          {/* 채팅 버튼 (우측 하단) */}
-          <button onClick={() => setChatOpen(true)} className="btn-jelly fixed bottom-6 right-6 z-30 rounded-2xl text-white flex items-center justify-center"
-            style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow:`0 4px 20px rgba(37,99,235,0.5)`, width:52, height:52 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          </button>
-        </>
+      {/* 플로팅 버튼들 — 반대 패널이 열려있어도 항상 표시 */}
+      {!journalOpen && (
+        <button onClick={() => setJournalOpen(true)} className="btn-jelly fixed bottom-6 left-6 z-30 rounded-2xl text-white flex items-center justify-center"
+          style={{ background:"linear-gradient(135deg, #6366f1, #4f46e5)", boxShadow:"0 4px 20px rgba(99,102,241,0.5)", width:52, height:52 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </button>
+      )}
+      {!chatOpen && (
+        <button onClick={() => setChatOpen(true)} className="btn-jelly fixed bottom-6 right-6 z-30 rounded-2xl text-white flex items-center justify-center"
+          style={{ background:`linear-gradient(135deg, ${ACCENT}, #1d4ed8)`, boxShadow:`0 4px 20px rgba(37,99,235,0.5)`, width:52, height:52 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </button>
       )}
 
       {/* 토스트 */}

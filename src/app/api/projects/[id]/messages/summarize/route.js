@@ -118,23 +118,23 @@ ${STRICT_NOTE}
 
     const aiText = await callGemini(systemPrompt, `채팅 내용 (${messages.length}개 메세지):\n\n${chatText}`);
 
-    const label = mode === "minutes" ? "회의록" : "AI 요약";
+    if (mode === "minutes") {
+      // 회의록: 채팅 표시 없이 보관함에만 저장
+      const now = new Date();
+      const artifactTitle = `회의록 — ${now.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })} ${now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}`;
+      await supabase.from("ai_artifacts").insert({
+        project_id: id,
+        type: "minutes",
+        title: artifactTitle,
+        content: { text: aiText, source_message_count: messages.length },
+      });
+      return Response.json({ aiText });
+    }
+
+    // AI 요약: 채팅창에만 표시
     const { data: saved } = await supabase.from("messages")
-      .insert({ project_id: id, member_name: label, content: aiText, is_ai: true })
+      .insert({ project_id: id, member_name: "AI 요약", content: aiText, is_ai: true })
       .select().single();
-
-    // 회의록·AI요약 둘 다 보관함에 저장 (회의록: minutes, 요약: summary)
-    const now = new Date();
-    const artifactTitle = mode === "minutes"
-      ? `회의록 — ${now.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })} ${now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}`
-      : `AI 요약 — ${now.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })} ${now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}`;
-
-    await supabase.from("ai_artifacts").insert({
-      project_id: id,
-      type: mode === "minutes" ? "minutes" : "summary",
-      title: artifactTitle,
-      content: { text: aiText, source_message_count: messages.length },
-    });
 
     return Response.json({ message: saved, aiText });
   } catch (err) {
