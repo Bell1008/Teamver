@@ -13,6 +13,7 @@ const BookIcon   = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="n
 const SparkIcon  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
 const SaveIcon   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>;
 const CheckIcon  = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>;
+const LockIcon   = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
 
 function formatDate(dateStr) {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
@@ -190,18 +191,34 @@ export default function JournalPanel({ projectId, myMemberId, myName, isOpen, on
 
           {/* AI 버튼 */}
           <div className="flex gap-2">
-            <button onClick={handleOrganize} disabled={organizeLoading || createLoading}
-              className="btn-jelly flex-1 py-2 rounded-xl text-xs font-semibold text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
-              style={{ backgroundColor: "rgba(255,255,255,0.18)", backdropFilter: "blur(4px)" }}>
-              <SparkIcon />
-              {organizeLoading ? "정리 중..." : "내용 정리"}
-            </button>
-            <button onClick={handleCreate} disabled={createLoading || organizeLoading}
-              className="btn-jelly flex-1 py-2 rounded-xl text-xs font-semibold text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
-              style={{ backgroundColor: "rgba(255,255,255,0.18)", backdropFilter: "blur(4px)" }}>
-              <SaveIcon />
-              {createLoading ? "생성 중..." : "일지 만들기"}
-            </button>
+            {canManage ? (
+              <button onClick={handleOrganize} disabled={organizeLoading || createLoading}
+                className="btn-jelly flex-1 py-2 rounded-xl text-xs font-semibold text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
+                style={{ backgroundColor: "rgba(255,255,255,0.18)", backdropFilter: "blur(4px)" }}>
+                <SparkIcon />
+                {organizeLoading ? "정리 중..." : "내용 정리"}
+              </button>
+            ) : (
+              <div className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-not-allowed select-none"
+                style={{ backgroundColor: "rgba(0,0,0,0.15)", color: "rgba(255,255,255,0.45)" }}
+                title="관리자 이상만 사용할 수 있습니다">
+                <LockIcon />내용 정리
+              </div>
+            )}
+            {canManage ? (
+              <button onClick={handleCreate} disabled={createLoading || organizeLoading}
+                className="btn-jelly flex-1 py-2 rounded-xl text-xs font-semibold text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
+                style={{ backgroundColor: "rgba(255,255,255,0.18)", backdropFilter: "blur(4px)" }}>
+                <SaveIcon />
+                {createLoading ? "생성 중..." : "일지 만들기"}
+              </button>
+            ) : (
+              <div className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-not-allowed select-none"
+                style={{ backgroundColor: "rgba(0,0,0,0.15)", color: "rgba(255,255,255,0.45)" }}
+                title="관리자 이상만 사용할 수 있습니다">
+                <LockIcon />일지 만들기
+              </div>
+            )}
           </div>
         </div>
 

@@ -1,22 +1,34 @@
 import { supabase } from "@/lib/supabase";
 import { getProjectPersona } from "@/lib/projectPersona";
 
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const GEMINI_MODELS = [
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+];
 
 async function callGemini(systemPrompt, userText) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY 환경변수가 없습니다.");
-  const res = await fetch(`${GEMINI_URL}?key=${key}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: "user", parts: [{ text: userText }] }],
-      generationConfig: { temperature: 0.3 },
-    }),
+  const body = JSON.stringify({
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: "user", parts: [{ text: userText }] }],
+    generationConfig: { temperature: 0.3 },
   });
-  if (!res.ok) throw new Error(`Gemini 오류 (${res.status})`);
-  return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+  for (const url of GEMINI_MODELS) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await fetch(`${url}?key=${key}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body,
+      });
+      if (res.ok) return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      if (res.status === 429 || res.status === 503) {
+        await new Promise((r) => setTimeout(r, (attempt + 1) * 1500));
+        continue;
+      }
+      break;
+    }
+  }
+  throw new Error("AI 서비스가 일시적으로 사용 불가합니다. 잠시 후 다시 시도해주세요.");
 }
 
 // POST /api/projects/[id]/journal/create — journal_draft들 → 최종 팀 일지 생성 → "journal" artifact 저장
