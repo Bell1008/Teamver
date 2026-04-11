@@ -8,11 +8,14 @@ export async function POST(request) {
     if (!project_id)
       return Response.json({ error: "project_id가 필요합니다." }, { status: 400 });
 
-    // DB에서 프로젝트 + 멤버 + 기획안 조회
-    const [{ data: project, error: pErr }, { data: members, error: mErr }, { data: planningDocs }] = await Promise.all([
+    // DB에서 프로젝트 + 멤버 + 기획안 + 보관함 기록 조회
+    const [{ data: project, error: pErr }, { data: members, error: mErr }, { data: planningDocs }, { data: prevArtifacts }] = await Promise.all([
       supabase.from("projects").select("*").eq("id", project_id).single(),
       supabase.from("members").select("*").eq("project_id", project_id).eq("is_ai", false),
       supabase.from("project_files").select("name, description").eq("project_id", project_id).eq("category", "planning"),
+      supabase.from("ai_artifacts").select("type, title, content, created_at").eq("project_id", project_id)
+        .in("type", ["kickoff", "aggregate", "journal"])
+        .order("created_at", { ascending: false }).limit(8),
     ]);
     if (pErr) throw pErr;
     if (mErr) throw mErr;
@@ -25,6 +28,24 @@ export async function POST(request) {
       : null;
 
     const persona = getProjectPersona(project);
+
+    // 보관함 컨텍스트 — 이전 킥오프, 팀 분석, 일지를 요약해 참고
+    const archiveCtx = prevArtifacts?.length
+      ? prevArtifacts.map((a) => {
+          if (a.type === "kickoff") {
+            const roles = a.content?.role_assignments?.map((r) => `${r.member_name}→${r.role}`).join(", ") ?? "";
+            return `[이전 킥오프 ${a.title}] 역할 배정: ${roles}`;
+          }
+          if (a.type === "aggregate") {
+            return `[팀 분석 ${a.title}] 건강도: ${a.content?.overall_health ?? "unknown"} / ${(a.content?.summary ?? "").slice(0, 120)}`;
+          }
+          if (a.type === "journal") {
+            return `[팀 일지 ${a.title}] ${(a.content?.text ?? "").slice(0, 200)}`;
+          }
+          return null;
+        }).filter(Boolean).join("\n")
+      : "없음";
+
     const result = await callKickoffAgent({
       project: {
         title: project.title,
@@ -33,6 +54,7 @@ export async function POST(request) {
         duration_weeks: project.duration_weeks,
         planning_documents: planningContext ?? "없음",
         domain_persona: persona,
+        team_history: archiveCtx,
       },
       members: members.map((m) => ({ name: m.name, skills: m.skills, personality: m.personality })),
       ai_members: [],
