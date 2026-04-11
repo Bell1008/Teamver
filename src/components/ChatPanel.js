@@ -280,16 +280,27 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
         ) : (
           <form
             onSubmit={handleSend}
-            className="px-4 py-4 flex gap-2.5 shrink-0"
+            className="px-4 py-3 flex items-end gap-2.5 shrink-0"
             style={{ borderTop: "1px solid rgba(37,99,235,0.08)" }}
           >
-            <input
+            <textarea
               ref={inputRef}
-              className="input-drop flex-1 border rounded-2xl px-4 py-2.5 text-sm"
-              style={{ borderColor: "rgba(37,99,235,0.15)", backgroundColor: "#f8faff" }}
-              placeholder="메세지 입력..."
+              rows={1}
+              className="input-drop flex-1 border rounded-2xl px-4 py-2.5 text-sm resize-none overflow-hidden"
+              style={{ borderColor: "rgba(37,99,235,0.15)", backgroundColor: "#f8faff", lineHeight: "1.5", maxHeight: "120px", overflowY: "auto" }}
+              placeholder="메세지 입력... (Shift+Enter 줄바꿈)"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (input.trim() && !sending) handleSend(e);
+                }
+              }}
               disabled={sending}
             />
             <button
