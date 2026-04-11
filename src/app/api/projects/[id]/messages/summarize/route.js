@@ -118,13 +118,8 @@ ${STRICT_NOTE}
 
     const aiText = await callGemini(systemPrompt, `채팅 내용 (${messages.length}개 메세지):\n\n${chatText}`);
 
-    const label = mode === "minutes" ? "회의록" : "AI 요약";
-    const { data: saved } = await supabase.from("messages")
-      .insert({ project_id: id, member_name: label, content: aiText, is_ai: true })
-      .select().single();
-
-    // 회의록만 보관함에 저장 (AI 요약은 채팅창에만 표시)
     if (mode === "minutes") {
+      // 회의록: 채팅 표시 없이 보관함에만 저장
       const now = new Date();
       const artifactTitle = `회의록 — ${now.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })} ${now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}`;
       await supabase.from("ai_artifacts").insert({
@@ -133,7 +128,13 @@ ${STRICT_NOTE}
         title: artifactTitle,
         content: { text: aiText, source_message_count: messages.length },
       });
+      return Response.json({ aiText });
     }
+
+    // AI 요약: 채팅창에만 표시
+    const { data: saved } = await supabase.from("messages")
+      .insert({ project_id: id, member_name: "AI 요약", content: aiText, is_ai: true })
+      .select().single();
 
     return Response.json({ message: saved, aiText });
   } catch (err) {
