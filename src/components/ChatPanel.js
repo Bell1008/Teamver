@@ -90,13 +90,14 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
       });
       const data = await res.json();
       if (data.error) { await dialog.alert(data.error); return; }
-      // 결과 팝업으로 즉시 표시
-      const isMinutes = mode === "minutes";
-      setAiModal({
-        title: isMinutes ? "회의록" : "AI 요약",
-        badge: isMinutes ? "보관함에 저장됨" : "채팅에 기록됨 · 보관함에 저장됨",
-        text: data.aiText ?? data.message?.content ?? "",
-      });
+      // 회의록만 팝업으로 표시 (AI 요약은 채팅에 단촐하게)
+      if (mode === "minutes") {
+        setAiModal({
+          title: "회의록",
+          badge: "보관함에 저장됨",
+          text: data.aiText ?? "",
+        });
+      }
     } finally {
       setAiLoading(null);
     }
