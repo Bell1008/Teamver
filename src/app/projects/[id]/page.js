@@ -93,8 +93,9 @@ export default function ProjectDashboard() {
 
     const ch = supabase.channel(`proj-${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "contribution_logs", filter: `project_id=eq.${id}` }, fetchData)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "members", filter: `project_id=eq.${id}` }, fetchData)
-      .on("postgres_changes", { event: "UPDATE",  schema: "public", table: "members", filter: `project_id=eq.${id}` }, fetchData)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "members",           filter: `project_id=eq.${id}` }, fetchData)
+      .on("postgres_changes", { event: "UPDATE",  schema: "public", table: "members",          filter: `project_id=eq.${id}` }, fetchData)
+      .on("postgres_changes", { event: "*",       schema: "public", table: "milestones",       filter: `project_id=eq.${id}` }, fetchData)
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, [id, fetchData]);

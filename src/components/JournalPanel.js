@@ -98,6 +98,7 @@ export default function JournalPanel({ projectId, myMemberId, myName, isOpen, on
 
     const ch = supabase.channel(`journal-${projectId}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "contribution_logs", filter: `project_id=eq.${projectId}` }, fetchData)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "ai_artifacts",      filter: `project_id=eq.${projectId}` }, fetchData)
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, [isOpen, projectId, fetchData]);
