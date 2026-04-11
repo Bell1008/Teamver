@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useDialog } from "@/components/DialogProvider";
+import AiResultModal from "@/components/AiResultModal";
 
 const ChatIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -28,6 +29,7 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [aiLoading, setAiLoading] = useState(null); // "summary" | "minutes" | null
+  const [aiModal, setAiModal] = useState(null); // { title, text, badge }
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -87,7 +89,14 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
         body: JSON.stringify({ mode }),
       });
       const data = await res.json();
-      if (data.error) await dialog.alert(data.error);
+      if (data.error) { await dialog.alert(data.error); return; }
+      // 결과 팝업으로 즉시 표시
+      const isMinutes = mode === "minutes";
+      setAiModal({
+        title: isMinutes ? "회의록" : "AI 요약",
+        badge: isMinutes ? "보관함에 저장됨" : "채팅에 기록됨 · 보관함에 저장됨",
+        text: data.aiText ?? data.message?.content ?? "",
+      });
     } finally {
       setAiLoading(null);
     }
@@ -97,6 +106,16 @@ export default function ChatPanel({ projectId, myMemberId, myName, accentColor, 
 
   return (
     <>
+      {/* AI 결과 팝업 */}
+      {aiModal && (
+        <AiResultModal
+          title={aiModal.title}
+          text={aiModal.text}
+          badge={aiModal.badge}
+          onClose={() => setAiModal(null)}
+        />
+      )}
+
       {/* 오버레이 (모바일) */}
       <div
         className="fixed inset-0 bg-black/20 z-30 sm:hidden"

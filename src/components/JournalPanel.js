@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useDialog } from "@/components/DialogProvider";
+import AiResultModal from "@/components/AiResultModal";
 
 const J  = "#2563eb";
 const J2 = "#1d4ed8";
@@ -73,6 +74,7 @@ export default function JournalPanel({ projectId, myMemberId, myName, isOpen, on
   const [loadingData, setLoadingData] = useState(false);
   const [organizeLoading, setOrganizeLoading] = useState(false);
   const [createLoading, setCreateLoading]     = useState(false);
+  const [aiModal, setAiModal] = useState(null); // { title, text, badge }
   const [form, setForm] = useState({ taskInput: "", memo: "", achievement_rate: 1 });
   const [submitting, setSubmitting] = useState(false);
   const [submitDone, setSubmitDone] = useState(false);
@@ -132,6 +134,12 @@ export default function JournalPanel({ projectId, myMemberId, myName, isOpen, on
       const data = await res.json();
       if (data.error) { await dialog.alert(data.error, { type: "warning" }); return; }
       await fetchData();
+      // 결과 즉시 팝업으로 표시
+      setAiModal({
+        title: data.title ?? "내용 정리",
+        badge: "보관함에 저장됨",
+        text: data.content?.text ?? "",
+      });
     } finally { setOrganizeLoading(false); }
   };
 
@@ -145,8 +153,13 @@ export default function JournalPanel({ projectId, myMemberId, myName, isOpen, on
       const res = await fetch(`/api/projects/${projectId}/journal/create`, { method: "POST" });
       const data = await res.json();
       if (data.error) { await dialog.alert(data.error, { type: "warning" }); return; }
-      await dialog.alert("일지가 AI 보관함에 저장되었습니다.", { type: "success" });
       onJournalCreated?.(); // 보관함 새로고침 신호
+      // 결과 즉시 팝업으로 표시
+      setAiModal({
+        title: data.title ?? "팀 일지",
+        badge: "AI 보관함에 저장됨",
+        text: data.content?.text ?? "",
+      });
     } finally { setCreateLoading(false); }
   };
 
@@ -164,6 +177,16 @@ export default function JournalPanel({ projectId, myMemberId, myName, isOpen, on
 
   return (
     <>
+      {/* AI 결과 팝업 */}
+      {aiModal && (
+        <AiResultModal
+          title={aiModal.title}
+          text={aiModal.text}
+          badge={aiModal.badge}
+          onClose={() => setAiModal(null)}
+        />
+      )}
+
       <div className="fixed inset-0 bg-black/20 z-30 sm:hidden" onClick={onClose} />
 
       <div className="fixed inset-y-0 left-0 w-full sm:w-[380px] flex flex-col z-40 journal-enter"
