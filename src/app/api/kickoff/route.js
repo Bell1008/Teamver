@@ -1,10 +1,11 @@
 import { supabase } from "@/lib/supabase";
 import { callKickoffAgent } from "@/services/gemini";
 import { getProjectPersona } from "@/lib/projectPersona";
+import { notifyProjectMembers } from "@/lib/notify";
 
 export async function POST(request) {
   try {
-    const { project_id } = await request.json();
+    const { project_id, actor_user_id } = await request.json();
     if (!project_id)
       return Response.json({ error: "project_id가 필요합니다." }, { status: 400 });
 
@@ -87,6 +88,15 @@ export async function POST(request) {
         member_count: members.length,
       },
     });
+
+    // 멤버들에게 킥오프 완료 알림
+    await notifyProjectMembers(
+      project_id, actor_user_id ?? null,
+      "ai_kickoff",
+      "킥오프가 완료됐습니다",
+      `"${project.title}" 프로젝트의 역할 배정과 마일스톤이 업데이트됐습니다.`,
+      `/projects/${project_id}`
+    );
 
     return Response.json(result, { status: 201 });
   } catch (err) {

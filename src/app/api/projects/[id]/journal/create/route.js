@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { getProjectPersona } from "@/lib/projectPersona";
+import { notifyProjectMembers } from "@/lib/notify";
 
 const GEMINI_MODELS = [
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
@@ -141,6 +142,8 @@ export async function POST(request, { params }) {
       })
       .select().single();
     if (saveErr) throw saveErr;
+
+    await notifyProjectMembers(id, null, "ai_journal", "팀 일지가 작성됐습니다", "관리자가 AI 팀 일지를 생성했습니다. 보관함에서 확인하세요.", `/projects/${id}`);
 
     return Response.json(journal, { status: 201 });
   } catch (err) {
