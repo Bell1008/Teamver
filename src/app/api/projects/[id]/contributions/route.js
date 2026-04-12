@@ -9,7 +9,7 @@ export async function GET(request, { params }) {
 
     let query = supabase
       .from("contribution_logs")
-      .select("id, member_id, date, completed_tasks, memo, achievement_rate, created_at, members(name, user_id)")
+      .select("id, member_id, date, completed_tasks, memo, achievement_rate, history, created_at, members(name, user_id)")
       .eq("project_id", id)
       .order("date", { ascending: false })
       .limit(100);
@@ -29,6 +29,7 @@ export async function GET(request, { params }) {
       completed_tasks: row.completed_tasks ?? [],
       memo: row.memo,
       achievement_rate: row.achievement_rate ?? 0,
+      history: row.history ?? [],
       created_at: row.created_at,
     }));
 
