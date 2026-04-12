@@ -20,8 +20,19 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 -- RLS
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "본인 알림 조회/수정/삭제" ON public.notifications
-  FOR ALL USING (auth.uid() = user_id);
+-- INSERT: 서버(anon key, JWT 없음)에서도 삽입 가능하도록 허용
+CREATE POLICY "알림 삽입 허용" ON public.notifications
+  FOR INSERT WITH CHECK (true);
+
+-- SELECT/UPDATE/DELETE: 본인 알림만
+CREATE POLICY "본인 알림만 조회" ON public.notifications
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "본인 알림만 수정" ON public.notifications
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "본인 알림만 삭제" ON public.notifications
+  FOR DELETE USING (auth.uid() = user_id);
 
 -- 인덱스
 CREATE INDEX IF NOT EXISTS notifications_user_id_idx     ON public.notifications(user_id);

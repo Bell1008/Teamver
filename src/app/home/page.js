@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSession, getProfile, signOut } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 import ProjectsTab from "@/components/tabs/ProjectsTab";
 import MessagesTab from "@/components/tabs/MessagesTab";
 import NotificationsTab from "@/components/tabs/NotificationsTab";
@@ -36,6 +37,7 @@ function HomePage() {
   const [dmTarget, setDmTarget]     = useState(null);
   const [unreadDm, setUnreadDm]     = useState(0);     // 미읽 DM 수 → 탭 배지
   const [unreadNotif, setUnreadNotif] = useState(0);   // 미읽 알림 수 → 탭 배지
+  const activeTabRef                = useRef("projects");
 
   useEffect(() => {
     getSession().then(async (session) => {
@@ -56,9 +58,33 @@ function HomePage() {
     if (dm)  setDmTarget({ partnerId: dm, partnerName: name ?? "팀원" });
   }, [searchParams]);
 
+  // activeTab 변경 추적 (realtime 클로저에서 참조)
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+
   // 탭 열리면 해당 배지 초기화
   useEffect(() => { if (activeTab === "messages")      setUnreadDm(0); }, [activeTab]);
   useEffect(() => { if (activeTab === "notifications") setUnreadNotif(0); }, [activeTab]);
+
+  // DM 미읽 수 초기 로드 + 영구 구독 (MessagesTab 비활성 시에도 배지 업데이트)
+  useEffect(() => {
+    if (!userId) return;
+    // 초기 카운트
+    fetch(`/api/dm?userId=${userId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setUnreadDm(data.reduce((s, t) => s + t.unread, 0));
+      });
+    // 새 DM 실시간 감지
+    const ch = supabase.channel(`home-dm-badge-${userId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "direct_messages" }, (payload) => {
+        const m = payload.new;
+        if (m.recipient_id === userId && activeTabRef.current !== "messages") {
+          setUnreadDm((prev) => prev + 1);
+        }
+      })
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [userId]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center page-water">
