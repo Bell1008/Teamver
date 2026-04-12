@@ -20,14 +20,20 @@ export async function GET(request) {
 
     const ids = profiles.map((p) => p.id);
 
-    // 팀플 이름 조회
-    const { data: memberRows } = await supabase
-      .from("members")
-      .select("user_id, name")
-      .in("user_id", ids);
+    // 나의 프로젝트 내 이름만 (다른 프로젝트 이름 혼입 방지)
+    const { data: myProjectRows } = await supabase
+      .from("members").select("project_id").eq("user_id", userId ?? "");
+    const myProjectIds = (myProjectRows ?? []).map((r) => r.project_id);
+
+    const { data: memberRows } = myProjectIds.length
+      ? await supabase.from("members").select("user_id, name")
+          .in("user_id", ids)
+          .in("project_id", myProjectIds)
+      : { data: [] };
 
     const nameMap = {};
     for (const m of memberRows ?? []) {
+      if (!m.user_id) continue;
       if (!nameMap[m.user_id]) nameMap[m.user_id] = [];
       if (!nameMap[m.user_id].includes(m.name)) nameMap[m.user_id].push(m.name);
     }

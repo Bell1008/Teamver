@@ -25,9 +25,18 @@ export async function GET(request) {
     ])];
     if (!otherIds.length) return Response.json({ received: [], sent: [] });
 
+    // 나의 프로젝트 목록 조회 (공유 프로젝트만 이름 표시)
+    const { data: myProjectRows } = await supabase
+      .from("members").select("project_id").eq("user_id", userId);
+    const myProjectIds = (myProjectRows ?? []).map((r) => r.project_id);
+
     const [{ data: profiles }, { data: memberRows }] = await Promise.all([
       supabase.from("profiles").select("id, username").in("id", otherIds),
-      supabase.from("members").select("user_id, name").in("user_id", otherIds),
+      myProjectIds.length
+        ? supabase.from("members").select("user_id, name")
+            .in("user_id", otherIds)
+            .in("project_id", myProjectIds)
+        : Promise.resolve({ data: [] }),
     ]);
 
     const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]));

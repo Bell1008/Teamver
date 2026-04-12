@@ -92,10 +92,21 @@ export default function ProjectDashboard() {
     fetchData();
 
     const ch = supabase.channel(`proj-${id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "contribution_logs", filter: `project_id=eq.${id}` }, fetchData)
+      .on("postgres_changes", { event: "*",      schema: "public", table: "contribution_logs", filter: `project_id=eq.${id}` }, fetchData)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "members",           filter: `project_id=eq.${id}` }, fetchData)
-      .on("postgres_changes", { event: "UPDATE",  schema: "public", table: "members",          filter: `project_id=eq.${id}` }, fetchData)
-      .on("postgres_changes", { event: "*",       schema: "public", table: "milestones",       filter: `project_id=eq.${id}` }, fetchData)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "members",           filter: `project_id=eq.${id}` }, fetchData)
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "members",           filter: `project_id=eq.${id}` }, (payload) => {
+        // 내가 내보내진 경우 → 홈으로 리다이렉트
+        const deletedMemberId = payload.old?.id;
+        setMyMemberId((prev) => {
+          if (prev && prev === deletedMemberId) {
+            router.replace("/home");
+          }
+          return prev;
+        });
+        fetchData();
+      })
+      .on("postgres_changes", { event: "*",      schema: "public", table: "milestones",        filter: `project_id=eq.${id}` }, fetchData)
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, [id, fetchData]);
@@ -784,6 +795,21 @@ export default function ProjectDashboard() {
                           </button>
                         )}
                       </div>
+                    )}
+                    {/* 방장: 내보내기 */}
+                    {isOwner && vm.user_id !== userId && (
+                      <button
+                        onClick={async () => {
+                          const ok = await dialog.confirm(`${vm.name}님을 프로젝트에서 내보내시겠습니까?`, { type: "danger" });
+                          if (!ok) return;
+                          const res = await fetch(`/api/members/${vm.id}?requesterId=${userId}`, { method: "DELETE" });
+                          if (res.ok) { setViewMember(null); showToast(`${vm.name}님을 내보냈습니다`); }
+                          else { const d = await res.json(); await dialog.alert(d.error ?? "내보내기 실패"); }
+                        }}
+                        className="btn-jelly w-full py-2 rounded-xl text-xs font-semibold"
+                        style={{backgroundColor:"rgba(220,38,38,0.07)",color:"#dc2626",border:"1px solid rgba(220,38,38,0.2)"}}>
+                        프로젝트에서 내보내기
+                      </button>
                     )}
                   </div>
                 </div>
