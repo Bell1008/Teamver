@@ -86,6 +86,29 @@ function HomePage() {
     return () => supabase.removeChannel(ch);
   }, [userId]);
 
+  // 알림 미읽 수 초기 로드 + 영구 구독
+  useEffect(() => {
+    if (!userId) return;
+    // 초기 카운트
+    fetch(`/api/notifications?userId=${userId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setUnreadNotif(data.filter((n) => !n.is_read).length);
+      });
+    // 새 알림 실시간 감지
+    const ch = supabase.channel(`home-notif-badge-${userId}`)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "notifications",
+        filter: `user_id=eq.${userId}`,
+      }, () => {
+        if (activeTabRef.current !== "notifications") {
+          setUnreadNotif((prev) => prev + 1);
+        }
+      })
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [userId]);
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center page-water">
       <p className="text-gray-400 text-sm">불러오는 중...</p>
