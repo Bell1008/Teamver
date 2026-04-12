@@ -40,6 +40,23 @@ export async function POST(request, { params }) {
     if (pErr || !project)
       return Response.json({ error: "유효하지 않은 초대 코드입니다." }, { status: 404 });
 
+    // 동일 user_id가 이미 이 프로젝트에 member 행을 갖고 있으면 중복 생성 방지
+    if (user_id) {
+      const { data: existing } = await supabase
+        .from("members")
+        .select("id, member_code, name")
+        .eq("project_id", project.id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .single();
+      if (existing) {
+        // 이름이 달라졌으면 업데이트
+        const updates = { name: name.trim(), skills: Array.isArray(skills) ? skills : (skills ?? "").split(",").map((s) => s.trim()).filter(Boolean), personality: personality ?? "" };
+        await supabase.from("members").update(updates).eq("id", existing.id);
+        return Response.json({ ...existing, ...updates }, { status: 200 });
+      }
+    }
+
     const member_code = randomBytes(8).toString("hex");
 
     const { data, error } = await supabase

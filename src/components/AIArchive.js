@@ -316,7 +316,7 @@ function MarkdownContent({ content }) {
 }
 
 /* ── 상세 팝업 모달 ───────────────────────────────────────── */
-function DetailModal({ artifact, onClose, onDelete }) {
+function DetailModal({ artifact, onClose, onDelete, canManage }) {
   const tc = TYPE_CONFIG[artifact.type] ?? TYPE_CONFIG.summary;
 
   return (
@@ -367,20 +367,22 @@ function DetailModal({ artifact, onClose, onDelete }) {
           )}
         </div>
 
-        {/* 하단 버튼 */}
-        <div className="shrink-0 px-5 py-4 flex justify-end border-t"
-          style={{ borderColor: "rgba(37,99,235,0.08)" }}>
-          <button
-            onClick={() => { onDelete(artifact.id); onClose(); }}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-              <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
-            </svg>
-            삭제
-          </button>
-        </div>
+        {/* 하단 버튼 — 관리자/방장만 삭제 가능 */}
+        {canManage && (
+          <div className="shrink-0 px-5 py-4 flex justify-end border-t"
+            style={{ borderColor: "rgba(37,99,235,0.08)" }}>
+            <button
+              onClick={() => { onDelete(artifact.id); onClose(); }}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+              삭제
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -426,7 +428,7 @@ const FILTER_OPTIONS = [
   { key: "journal",   label: "팀 일지" },
 ];
 
-export default function AIArchive({ projectId, isOpen, onClose, refreshKey }) {
+export default function AIArchive({ projectId, isOpen, onClose, refreshKey, canManage = false }) {
   const dialog = useDialog();
   const [artifacts, setArtifacts]         = useState([]);
   const [loading, setLoading]             = useState(false);
@@ -545,6 +547,7 @@ export default function AIArchive({ projectId, isOpen, onClose, refreshKey }) {
           artifact={selectedArtifact}
           onClose={() => setSelected(null)}
           onDelete={handleDelete}
+          canManage={canManage}
         />
       )}
     </div>

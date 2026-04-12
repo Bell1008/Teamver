@@ -26,14 +26,18 @@ export async function GET(request) {
     const myProjectIds = (myProjectRows ?? []).map((r) => r.project_id);
 
     const { data: memberRows } = myProjectIds.length
-      ? await supabase.from("members").select("user_id, name")
+      ? await supabase.from("members").select("user_id, name, project_id")
           .in("user_id", ids)
           .in("project_id", myProjectIds)
       : { data: [] };
 
     const nameMap = {};
+    const seenPairs = new Set();
     for (const m of memberRows ?? []) {
       if (!m.user_id) continue;
+      const pairKey = `${m.user_id}:${m.project_id}`;
+      if (seenPairs.has(pairKey)) continue;
+      seenPairs.add(pairKey);
       if (!nameMap[m.user_id]) nameMap[m.user_id] = [];
       if (!nameMap[m.user_id].includes(m.name)) nameMap[m.user_id].push(m.name);
     }

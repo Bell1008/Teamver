@@ -26,12 +26,23 @@ export async function GET(request, { params }) {
         .single(),
     ]);
 
-    // 공유 프로젝트 찾기
-    const myProjectIds = new Set((myMembers ?? []).map((m) => m.project_id));
-    const sharedProjects = (theirMembers ?? [])
+    // 공유 프로젝트 찾기 — project_id 기준 중복 제거 (같은 프로젝트에 여러 member 행 방지)
+    const dedup = (rows) => {
+      const seen = new Set();
+      return (rows ?? []).filter((m) => {
+        if (seen.has(m.project_id)) return false;
+        seen.add(m.project_id);
+        return true;
+      });
+    };
+    const myDedupedMembers    = dedup(myMembers);
+    const theirDedupedMembers = dedup(theirMembers);
+
+    const myProjectIds = new Set(myDedupedMembers.map((m) => m.project_id));
+    const sharedProjects = theirDedupedMembers
       .filter((tm) => myProjectIds.has(tm.project_id))
       .map((tm) => {
-        const myM = (myMembers ?? []).find((m) => m.project_id === tm.project_id);
+        const myM = myDedupedMembers.find((m) => m.project_id === tm.project_id);
         return {
           projectId: tm.project_id,
           projectTitle: tm.projects?.title ?? "팀플",
