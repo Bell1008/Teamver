@@ -40,8 +40,8 @@ export async function GET(request, { params }) {
         };
       });
 
-    // 파트너의 모든 팀플 이름 (중복 제거)
-    const theirMemberNames = [...new Set((theirMembers ?? []).map((m) => m.name).filter(Boolean))];
+    // 공유 프로젝트 내의 이름만 (다른 프로젝트 이름 혼입 방지)
+    const theirMemberNames = [...new Set(sharedProjects.map((p) => p.theirName).filter(Boolean))];
 
     return Response.json({
       partnerId,

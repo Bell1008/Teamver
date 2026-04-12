@@ -5,7 +5,10 @@ import { supabase } from "@/lib/supabase";
  */
 export async function notify(userId, type, title, body = null, link = null) {
   if (!userId) return;
-  await supabase.from("notifications").insert({ user_id: userId, type, title, body, link });
+  const { error } = await supabase
+    .from("notifications")
+    .insert({ user_id: userId, type, title, body, link });
+  if (error) console.error("[notify] insert failed:", error.message, { userId, type });
 }
 
 /**
@@ -28,5 +31,6 @@ export async function notifyProjectMembers(projectId, excludeUserId, type, title
   if (!userIds.length) return;
 
   const rows = userIds.map((user_id) => ({ user_id, type, title, body, link }));
-  await supabase.from("notifications").insert(rows);
+  const { error } = await supabase.from("notifications").insert(rows);
+  if (error) console.error("[notifyProjectMembers] insert failed:", error.message, { projectId, type });
 }

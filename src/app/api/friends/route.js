@@ -36,18 +36,24 @@ export async function GET(request) {
     const friendIds = (rows ?? []).map((r) => r.sender_id === userId ? r.recipient_id : r.sender_id);
     if (!friendIds.length) return Response.json([]);
 
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, username")
-      .in("id", friendIds);
+    // 나의 프로젝트 목록 (공유 프로젝트 내 이름만 표시)
+    const { data: myProjectRows } = await supabase
+      .from("members").select("project_id").eq("user_id", userId);
+    const myProjectIds = (myProjectRows ?? []).map((r) => r.project_id);
 
-    const { data: memberRows } = await supabase
-      .from("members")
-      .select("user_id, name")
-      .in("user_id", friendIds);
+    const [{ data: profiles }, { data: memberRows }] = await Promise.all([
+      supabase.from("profiles").select("id, username").in("id", friendIds),
+      myProjectIds.length
+        ? supabase.from("members").select("user_id, name")
+            .in("user_id", friendIds)
+            .in("project_id", myProjectIds)
+        : Promise.resolve({ data: [] }),
+    ]);
 
+    // 공유 프로젝트 이름만 수집 (user_id별 중복 제거)
     const nameMap = {};
     for (const m of memberRows ?? []) {
+      if (!m.user_id) continue;
       if (!nameMap[m.user_id]) nameMap[m.user_id] = [];
       if (!nameMap[m.user_id].includes(m.name)) nameMap[m.user_id].push(m.name);
     }

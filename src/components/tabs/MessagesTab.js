@@ -34,7 +34,7 @@ const FileIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="non
 const DlIcon  = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
 
 /* ── 파트너 프로필 모달 ─────────────────────────────────── */
-function PartnerProfileModal({ partnerId, myUserId, onClose }) {
+function PartnerProfileModal({ partnerId, myUserId, onClose, onStartDm = null }) {
   const [info, setInfo]           = useState(null);
   const [friendStatus, setFriendStatus] = useState(null); // null | "none" | "accepted" | "pending_sent" | "pending_received"
   const [friendId, setFriendId]   = useState(null);       // friend_requests.id
@@ -85,7 +85,6 @@ function PartnerProfileModal({ partnerId, myUserId, onClose }) {
 
   const friendBtnConfig = {
     none:             { label: "친구 추가",  style: { backgroundColor: ACCENT, color: "#fff" } },
-    accepted:         { label: "친구 삭제",  style: { backgroundColor: "#fee2e2", color: "#dc2626" } },
     pending_sent:     { label: "요청 취소",  style: { backgroundColor: "#f3f4f6", color: "#6b7280" } },
     pending_received: { label: "요청 수락",  style: { backgroundColor: "#dcfce7", color: "#16a34a" } },
   };
@@ -131,7 +130,28 @@ function PartnerProfileModal({ partnerId, myUserId, onClose }) {
         {/* 바디 */}
         <div className="px-5 py-4 space-y-4">
           {/* 친구 액션 버튼 */}
-          {btnCfg && (
+          {friendStatus === "accepted" && onStartDm ? (
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  onStartDm({ id: partnerId, username: info.username, memberNames: info.memberNames ?? [] });
+                  onClose();
+                }}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all"
+                style={{ backgroundColor: ACCENT, color: "#fff" }}
+              >
+                개인 메시지
+              </button>
+              <button
+                onClick={handleFriendAction}
+                disabled={friendLoading}
+                className="w-full py-2 rounded-xl text-xs font-medium transition-all"
+                style={friendLoading ? { backgroundColor: "#f3f4f6", color: "#9ca3af" } : { backgroundColor: "#fee2e2", color: "#dc2626", border: "1px solid rgba(220,38,38,0.15)" }}
+              >
+                {friendLoading ? "처리 중..." : "친구 삭제"}
+              </button>
+            </div>
+          ) : btnCfg ? (
             <button
               onClick={handleFriendAction}
               disabled={friendLoading}
@@ -140,7 +160,7 @@ function PartnerProfileModal({ partnerId, myUserId, onClose }) {
             >
               {friendLoading ? "처리 중..." : btnCfg.label}
             </button>
-          )}
+          ) : null}
 
           {/* 첫 연락 */}
           {info.firstContactAt && (
@@ -677,7 +697,12 @@ function FriendsPanel({ userId, onStartDm, myUserId }) {
     <div className="flex flex-col flex-1 overflow-hidden bg-white">
       {/* 프로필 팝업 */}
       {profilePartnerId && (
-        <PartnerProfileModal partnerId={profilePartnerId} myUserId={myUserId} onClose={() => setProfilePartnerId(null)} />
+        <PartnerProfileModal
+          partnerId={profilePartnerId}
+          myUserId={myUserId}
+          onClose={() => setProfilePartnerId(null)}
+          onStartDm={(friend) => { setProfilePartnerId(null); onStartDm(friend); }}
+        />
       )}
 
       {/* 서브 탭 */}
