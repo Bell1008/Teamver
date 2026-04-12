@@ -8,7 +8,7 @@ export async function notify(userId, type, title, body = null, link = null) {
   const { error } = await supabase
     .from("notifications")
     .insert({ user_id: userId, type, title, body, link });
-  if (error) console.error("[notify] insert failed:", error.message, { userId, type });
+  if (error) console.error("[notify] insert failed:", { message: error.message, code: error.code, details: error.details, hint: error.hint, userId, type });
 }
 
 /**
@@ -32,5 +32,5 @@ export async function notifyProjectMembers(projectId, excludeUserId, type, title
 
   const rows = userIds.map((user_id) => ({ user_id, type, title, body, link }));
   const { error } = await supabase.from("notifications").insert(rows);
-  if (error) console.error("[notifyProjectMembers] insert failed:", error.message, { projectId, type });
+  if (error) console.error("[notifyProjectMembers] insert failed:", { message: error.message, code: error.code, details: error.details, hint: error.hint, projectId, type });
 }
