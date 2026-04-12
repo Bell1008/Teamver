@@ -89,11 +89,14 @@ function HomePage() {
   // 알림 미읽 수 초기 로드 + 영구 구독
   useEffect(() => {
     if (!userId) return;
-    // 초기 카운트
-    fetch(`/api/notifications?userId=${userId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setUnreadNotif(data.filter((n) => !n.is_read).length);
+    // 초기 카운트 — API 라우트(anon key → RLS 차단) 대신 브라우저 Supabase 클라이언트로 직접 조회
+    supabase
+      .from("notifications")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("is_read", false)
+      .then(({ data }) => {
+        if (Array.isArray(data)) setUnreadNotif(data.length);
       });
     // 새 알림 실시간 감지
     const ch = supabase.channel(`home-notif-badge-${userId}`)
