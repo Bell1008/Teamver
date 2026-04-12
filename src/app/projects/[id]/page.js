@@ -843,7 +843,7 @@ export default function ProjectDashboard() {
       <AggregateReport report={aggregateResult} onClose={() => setAggregateResult(null)} />
 
       {/* AI 작업물 보관함 */}
-      <AIArchive projectId={id} isOpen={archiveOpen} onClose={() => setArchiveOpen(false)} refreshKey={archiveRefreshKey} />
+      <AIArchive projectId={id} isOpen={archiveOpen} onClose={() => setArchiveOpen(false)} refreshKey={archiveRefreshKey} canManage={isOwner || isAdmin} />
 
       <style>{`
         @keyframes fadeInDown {

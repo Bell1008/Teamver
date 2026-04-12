@@ -33,7 +33,7 @@ export async function GET(request) {
     const [{ data: profiles }, { data: memberRows }] = await Promise.all([
       supabase.from("profiles").select("id, username").in("id", otherIds),
       myProjectIds.length
-        ? supabase.from("members").select("user_id, name")
+        ? supabase.from("members").select("user_id, name, project_id")
             .in("user_id", otherIds)
             .in("project_id", myProjectIds)
         : Promise.resolve({ data: [] }),
@@ -41,7 +41,12 @@ export async function GET(request) {
 
     const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]));
     const nameMap = {};
+    const seenPairs = new Set();
     for (const m of memberRows ?? []) {
+      if (!m.user_id) continue;
+      const pairKey = `${m.user_id}:${m.project_id}`;
+      if (seenPairs.has(pairKey)) continue;
+      seenPairs.add(pairKey);
       if (!nameMap[m.user_id]) nameMap[m.user_id] = [];
       if (!nameMap[m.user_id].includes(m.name)) nameMap[m.user_id].push(m.name);
     }
