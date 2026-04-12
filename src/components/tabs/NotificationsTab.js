@@ -84,10 +84,16 @@ export default function NotificationsTab({ userId, accentColor, onUnreadChange }
   const [notifs, setNotifs]   = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // API 라우트 대신 브라우저 Supabase 클라이언트로 직접 조회
+  // (API 라우트는 anon key라 SELECT RLS가 차단함 — 브라우저엔 로그인 JWT 있음)
   const refresh = useCallback(async () => {
     if (!userId) return;
-    const res  = await fetch(`/api/notifications?userId=${userId}`);
-    const data = await res.json();
+    const { data } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(60);
     const list = Array.isArray(data) ? data : [];
     setNotifs(list);
     onUnreadChange?.(list.filter((n) => !n.is_read).length);
@@ -118,28 +124,20 @@ export default function NotificationsTab({ userId, accentColor, onUnreadChange }
   const handleMarkRead = useCallback(async (id) => {
     setNotifs((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
     onUnreadChange?.((c) => Math.max(0, (typeof c === "number" ? c : 1) - 1));
-    await fetch(`/api/notifications?userId=${userId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: [id] }),
-    });
+    await supabase.from("notifications").update({ is_read: true }).eq("id", id).eq("user_id", userId);
   }, [userId, onUnreadChange]);
 
   const handleMarkAllRead = useCallback(async () => {
     setNotifs((prev) => prev.map((n) => ({ ...n, is_read: true })));
     onUnreadChange?.(0);
-    await fetch(`/api/notifications?userId=${userId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: "all" }),
-    });
+    await supabase.from("notifications").update({ is_read: true }).eq("user_id", userId);
   }, [userId, onUnreadChange]);
 
   const handleDelete = useCallback(async (id) => {
     const n = notifs.find((x) => x.id === id);
     setNotifs((prev) => prev.filter((x) => x.id !== id));
     if (n && !n.is_read) onUnreadChange?.((c) => Math.max(0, (typeof c === "number" ? c : 1) - 1));
-    await fetch(`/api/notifications?id=${id}&userId=${userId}`, { method: "DELETE" });
+    await supabase.from("notifications").delete().eq("id", id).eq("user_id", userId);
   }, [userId, notifs, onUnreadChange]);
 
   const unreadCount = notifs.filter((n) => !n.is_read).length;
