@@ -327,8 +327,8 @@ export default function MilestonesSection({ projectId, milestones: initialMilest
             )}
           </div>
 
-          {/* 추가 마일스톤 받기 */}
-          {milestones.length > 0 && (
+          {/* 추가 마일스톤 받기 — 관리자/방장만 */}
+          {milestones.length > 0 && canEdit && (
             <button
               onClick={handleGetNext}
               disabled={nextLoading}
