@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { notify } from "@/lib/notify";
 
 // GET /api/friends?userId=X            → 친구 목록 (accepted)
 // GET /api/friends?userId=X&otherId=Y  → 두 사람 관계 상태
@@ -95,7 +96,34 @@ export async function POST(request) {
       .insert({ sender_id: senderId, recipient_id: recipientId })
       .select().single();
     if (error) throw error;
+
+    // 수신자에게 알림
+    const { data: senderProfile } = await supabase
+      .from("profiles").select("username").eq("id", senderId).single();
+    const senderName = senderProfile?.username ?? "누군가";
+    await notify(recipientId, "friend_request", "친구 요청이 왔습니다", `${senderName}님이 친구 요청을 보냈습니다.`, "/home?tab=messages");
+
     return Response.json(data, { status: 201 });
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}
+
+// DELETE /api/friends?userId=X&friendId=Y  → 친구 삭제
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId   = searchParams.get("userId");
+    const friendId = searchParams.get("friendId");
+    if (!userId || !friendId) return Response.json({ error: "userId, friendId 필요" }, { status: 400 });
+
+    const { error } = await supabase
+      .from("friend_requests")
+      .delete()
+      .or(`and(sender_id.eq.${userId},recipient_id.eq.${friendId}),and(sender_id.eq.${friendId},recipient_id.eq.${userId})`);
+
+    if (error) throw error;
+    return Response.json({ ok: true });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }

@@ -35,12 +35,60 @@ const DlIcon  = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none
 
 /* ── 파트너 프로필 모달 ─────────────────────────────────── */
 function PartnerProfileModal({ partnerId, myUserId, onClose }) {
-  const [info, setInfo] = useState(null);
+  const [info, setInfo]           = useState(null);
+  const [friendStatus, setFriendStatus] = useState(null); // null | "none" | "accepted" | "pending_sent" | "pending_received"
+  const [friendId, setFriendId]   = useState(null);       // friend_requests.id
+  const [friendLoading, setFriendLoading] = useState(false);
 
   useEffect(() => {
     fetch(`/api/dm/${partnerId}/profile?userId=${myUserId}`)
       .then((r) => r.json()).then(setInfo);
+    fetch(`/api/friends?userId=${myUserId}&otherId=${partnerId}`)
+      .then((r) => r.json())
+      .then((d) => { setFriendStatus(d.status ?? "none"); setFriendId(d.id ?? null); });
   }, [partnerId, myUserId]);
+
+  const handleFriendAction = async () => {
+    setFriendLoading(true);
+    try {
+      if (friendStatus === "none") {
+        // 친구 요청
+        const res  = await fetch("/api/friends", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ senderId: myUserId, recipientId: partnerId }),
+        });
+        const data = await res.json();
+        if (data.id) { setFriendStatus("pending_sent"); setFriendId(data.id); }
+      } else if (friendStatus === "accepted") {
+        // 친구 삭제
+        await fetch(`/api/friends?userId=${myUserId}&friendId=${partnerId}`, { method: "DELETE" });
+        setFriendStatus("none"); setFriendId(null);
+      } else if (friendStatus === "pending_sent") {
+        // 요청 취소
+        await fetch(`/api/friends/requests/${friendId}`, {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "cancel" }),
+        });
+        setFriendStatus("none"); setFriendId(null);
+      } else if (friendStatus === "pending_received") {
+        // 수락
+        await fetch(`/api/friends/requests/${friendId}`, {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "accept" }),
+        });
+        setFriendStatus("accepted");
+      }
+    } finally {
+      setFriendLoading(false);
+    }
+  };
+
+  const friendBtnConfig = {
+    none:             { label: "친구 추가",  style: { backgroundColor: ACCENT, color: "#fff" } },
+    accepted:         { label: "친구 삭제",  style: { backgroundColor: "#fee2e2", color: "#dc2626" } },
+    pending_sent:     { label: "요청 취소",  style: { backgroundColor: "#f3f4f6", color: "#6b7280" } },
+    pending_received: { label: "요청 수락",  style: { backgroundColor: "#dcfce7", color: "#16a34a" } },
+  };
 
   if (!info) return (
     <div className="absolute inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={onClose}>
@@ -51,6 +99,7 @@ function PartnerProfileModal({ partnerId, myUserId, onClose }) {
   // 팀플 이름 우선, 없으면 계정 username
   const displayName = formatMemberNames(info.memberNames) || info.username || "알 수 없음";
   const showUsername = info.username && info.username !== "알 수 없음" && info.username !== displayName;
+  const btnCfg = friendBtnConfig[friendStatus] ?? null;
 
   return (
     <div className="absolute inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -69,12 +118,30 @@ function PartnerProfileModal({ partnerId, myUserId, onClose }) {
               {showUsername && (
                 <p className="text-white/60 text-xs mt-0.5">@{info.username}</p>
               )}
+              {friendStatus === "accepted" && (
+                <span className="inline-flex items-center gap-1 mt-1 text-xs text-white/80">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  친구
+                </span>
+              )}
             </div>
           </div>
         </div>
 
         {/* 바디 */}
         <div className="px-5 py-4 space-y-4">
+          {/* 친구 액션 버튼 */}
+          {btnCfg && (
+            <button
+              onClick={handleFriendAction}
+              disabled={friendLoading}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={friendLoading ? { backgroundColor: "#f3f4f6", color: "#9ca3af" } : btnCfg.style}
+            >
+              {friendLoading ? "처리 중..." : btnCfg.label}
+            </button>
+          )}
+
           {/* 첫 연락 */}
           {info.firstContactAt && (
             <div className="flex items-center gap-2.5 text-xs text-gray-500">
@@ -102,7 +169,7 @@ function PartnerProfileModal({ partnerId, myUserId, onClose }) {
             </div>
           )}
 
-          {info.sharedProjects.length === 0 && !info.firstContactAt && (
+          {info.sharedProjects.length === 0 && !info.firstContactAt && !btnCfg && (
             <p className="text-sm text-gray-400 text-center py-2">공유된 팀플이 없습니다.</p>
           )}
         </div>

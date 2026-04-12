@@ -34,7 +34,8 @@ function HomePage() {
   const [profile, setProfile]       = useState(null);
   const [loading, setLoading]       = useState(true);
   const [dmTarget, setDmTarget]     = useState(null);
-  const [unreadDm, setUnreadDm]     = useState(0); // 미읽 DM 수 → 탭 배지
+  const [unreadDm, setUnreadDm]     = useState(0);     // 미읽 DM 수 → 탭 배지
+  const [unreadNotif, setUnreadNotif] = useState(0);   // 미읽 알림 수 → 탭 배지
 
   useEffect(() => {
     getSession().then(async (session) => {
@@ -55,8 +56,9 @@ function HomePage() {
     if (dm)  setDmTarget({ partnerId: dm, partnerName: name ?? "팀원" });
   }, [searchParams]);
 
-  // 메시지 탭 열면 배지 초기화
-  useEffect(() => { if (activeTab === "messages") setUnreadDm(0); }, [activeTab]);
+  // 탭 열리면 해당 배지 초기화
+  useEffect(() => { if (activeTab === "messages")      setUnreadDm(0); }, [activeTab]);
+  useEffect(() => { if (activeTab === "notifications") setUnreadNotif(0); }, [activeTab]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center page-water">
@@ -89,7 +91,9 @@ function HomePage() {
         <nav className="flex-1 py-3 space-y-0.5 px-2">
           {TABS.map((tab) => {
             const active = activeTab === tab.id;
-            const badge  = tab.id === "messages" && unreadDm > 0 ? unreadDm : 0;
+            const badge  = tab.id === "messages" && unreadDm > 0 ? unreadDm
+                         : tab.id === "notifications" && unreadNotif > 0 ? unreadNotif
+                         : 0;
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className="btn-jelly w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
@@ -139,7 +143,7 @@ function HomePage() {
       <main className="flex-1 overflow-hidden">
         {activeTab === "projects"      && <ProjectsTab userId={userId} accentColor={ACCENT} />}
         {activeTab === "messages"      && <MessagesTab userId={userId} initialPartnerId={dmTarget?.partnerId} initialPartnerName={dmTarget?.partnerName} onUnreadChange={setUnreadDm} />}
-        {activeTab === "notifications" && <NotificationsTab />}
+        {activeTab === "notifications" && <NotificationsTab userId={userId} accentColor={ACCENT} onUnreadChange={setUnreadNotif} />}
         {activeTab === "settings"      && <SettingsTab />}
         {activeTab === "profile"       && <MyInfoTab profile={profile} userId={userId} onProfileUpdate={setProfile} />}
       </main>

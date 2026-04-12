@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { notifyProjectMembers } from "@/lib/notify";
 
 const FREE_FILE_LIMIT   = 10;
 const FREE_PLANNING_LIMIT = 3;
@@ -53,6 +54,17 @@ export async function POST(request, { params }) {
       .select().single();
 
     if (error) throw error;
+
+    // 프로젝트 멤버에게 파일 업로드 알림 (업로더 제외)
+    const uploaderUserId = body.user_id ?? null;
+    await notifyProjectMembers(
+      id, uploaderUserId,
+      "file_upload",
+      "파일이 업로드됐습니다",
+      `${member_name ?? "팀원"}님이 "${name}"을(를) 올렸습니다.`,
+      `/projects/${id}`
+    );
+
     return Response.json(data, { status: 201 });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });

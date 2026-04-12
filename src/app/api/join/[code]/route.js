@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { randomBytes } from "crypto";
+import { notifyProjectMembers } from "@/lib/notify";
 
 // 초대 코드로 프로젝트 기본 정보 조회
 export async function GET(request, { params }) {
@@ -56,6 +57,16 @@ export async function POST(request, { params }) {
       .single();
 
     if (error) throw error;
+
+    // 기존 멤버에게 새 팀원 참가 알림 (본인 제외)
+    await notifyProjectMembers(
+      project.id, user_id ?? null,
+      "project_join",
+      "새 팀원이 참가했습니다",
+      `${name.trim()}님이 프로젝트에 참가했습니다.`,
+      `/projects/${project.id}`
+    );
+
     return Response.json(data, { status: 201 });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
